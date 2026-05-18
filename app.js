@@ -68,8 +68,15 @@ function squadBadge(squad) {
   return `<span class="badge badge--squad" style="background:${s.color}">${esc(s.label)}</span>`;
 }
 
+const ROLE_ICONS = {
+  'officer': '👑',
+  'Jungle':  '🌿',
+  'ninja':   '🥷',
+};
+
 function roleBadge(role) {
-  return `<span class="badge badge--role">${esc(role)}</span>`;
+  const icon = ROLE_ICONS[role] ?? '';
+  return `<span class="badge badge--role">${icon ? icon + ' ' : ''}${esc(role)}</span>`;
 }
 
 function gearBadge(level) {

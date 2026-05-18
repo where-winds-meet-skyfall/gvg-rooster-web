@@ -14,7 +14,7 @@
 const BUILDS = {
   // ── Heal ──────────────────────────────────────────
   heal: {
-    label:      "Heal",
+    label:      "💚 Heal",
     color:      "#22c55e",
     category:   "Heal",
     techniques: ["Panacea (Fan)", "Soulshade (Umbrella)"],
@@ -23,35 +23,35 @@ const BUILDS = {
 
   // ── DD ────────────────────────────────────────────
   umbrella_dd: {
-    label:      "Umbrella DD",
+    label:      "☂️ Umbrella DD",
     color:      "#f97316",
     category:   "DD",
     techniques: ["Inkwell (Fan)", "Vernal (Umbrella)"],
     weapons:    ["Fan", "Umbrella"]
   },
   umbrella_dd_aoe: {
-    label:      "Umbrella DD AOE",
+    label:      "🌀 Umbrella DD AOE",
     color:      "#a855f7",
     category:   "DD",
     techniques: ["Unfettered (Whip)", "Everspring (Umbrella)"],
     weapons:    ["Whip", "Umbrella"]
   },
   nameless: {
-    label:      "Nameless",
+    label:      "🗡️ Nameless",
     color:      "#3b82f6",
     category:   "DD",
     techniques: ["Nameless Sword", "Nameless Spear"],
     weapons:    ["Sword", "Spear"]
   },
   strategic: {
-    label:      "Strategic",
+    label:      "🧠 Strategic",
     color:      "#60a5fa",
     category:   "DD",
     techniques: ["Strategic Sword", "Heavensquaker Spear"],
     weapons:    ["Sword", "Spear"]
   },
   duals: {
-    label:      "Duals",
+    label:      "🔱 Duals",
     color:      "#d946ef",
     category:   "DD",
     techniques: ["Infernal Twinblades", "Mortal Rope Dart"],
@@ -60,14 +60,14 @@ const BUILDS = {
 
   // ── Tank ──────────────────────────────────────────
   tank: {
-    label:      "Tank",
+    label:      "🛡️ Tank",
     color:      "#eab308",
     category:   "Tank",
     techniques: ["Thundercy Blade (Mo Blade)", "Stormbreaker (Spear)"],
     weapons:    ["Mo Blade", "Spear"]
   },
   katana: {
-    label:      "Katana",
+    label:      "⚔️ Katana",
     color:      "#be123c",
     category:   "Tank",
     techniques: ["Snowparting (Mo Blade)", "Phalanxbane (Katana)"],
@@ -84,33 +84,33 @@ const BUILDS = {
  *   gearLevel — рівень спорядження: "low" | "mid" | "high"
  *   ready     — готовий до бою 30×30 (true / false)
  *   squad     — пачка: "attack" | "def" | null (нерозподілений)
- *   roles     — масив додаткових ролей: [] | ["officer"] | ["ranger"] | ["ninja"] тощо
+ *   roles     — масив додаткових ролей: [] | ["officer"] | ["Jungle"] | ["ninja"] тощо
  *   note      — тактична нотатка ("фокус", фланг, захист точки тощо), або ""
  *
  * Приклад:
  *   { name: "Tankmaster", build: "tank",   altBuild: null,      gearLevel: "mid", ready: true,  squad: "def",    roles: ["officer"], note: "фокус" },
  *   { name: "HolyLight",  build: "heal",   altBuild: null,      gearLevel: "mid", ready: true,  squad: "attack", roles: [],          note: "" },
- *   { name: "ShadowX",    build: "duals",  altBuild: null,      gearLevel: "mid", ready: false, squad: null,     roles: ["ranger"],   note: "фланг" },
+ *   { name: "ShadowX",    build: "duals",  altBuild: null,      gearLevel: "mid", ready: false, squad: null,     roles: ["Jungle"],   note: "фланг" },
  */
 const PLAYERS = [
-  { name: "LELUSH",          build: "tank",            altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: "def",    roles: ["officer", "ranger"], note: "гібрид: Mo Blade + Inkwell Fan; чистий танк" },
+  { name: "LELUSH",          build: "tank",            altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: "def",    roles: ["officer", "Jungle"], note: "гібрид: Mo Blade + Inkwell Fan; чистий танк" },
   { name: "QiShye",          build: "nameless",        altBuild: "heal",             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
-  { name: "SunRise",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["ranger"], note: "" },
+  { name: "SunRise",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["Jungle"], note: "" },
   { name: "Nixmoonky",       build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "LuthiXia",        build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["officer"], note: "" },
   { name: "MasterFoobar",    build: "tank",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "чистий танк" },
-  { name: "PonIka",          build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["ranger"], note: "" },
+  { name: "PonIka",          build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["Jungle"], note: "" },
   { name: "AUrory",          build: "umbrella_dd",     altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "ArthurPencilgun", build: "duals",           altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "lHanLil",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
   { name: "Nanami",          build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "чистий хіл" },
-  { name: "Chifusama",       build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["officer", "ranger"], note: "" },
-  { name: "EnEr",            build: "umbrella_dd_aoe", altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["ranger"], note: "" },
-  { name: "CantBeTouched",   build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["officer", "ranger"], note: "" },
+  { name: "Chifusama",       build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["officer", "Jungle"], note: "" },
+  { name: "EnEr",            build: "umbrella_dd_aoe", altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["Jungle"], note: "" },
+  { name: "CantBeTouched",   build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["officer", "Jungle"], note: "" },
   { name: "MariSkywalker",   build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
   { name: "Kelevra",         build: "nameless",        altBuild: null,             gearLevel: "high", ready: true,  squad: "attack", roles: ["officer"], note: "" },
   { name: "datsann",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
-  { name: "CyMþak",          build: "strategic",       altBuild: "nameless",       gearLevel: "mid", ready: true,  squad: "attack", roles: ["ranger"], note: "" },
+  { name: "CyMþak",          build: "strategic",       altBuild: "nameless",       gearLevel: "mid", ready: true,  squad: "attack", roles: ["Jungle"], note: "" },
   { name: "Kirito_AL",       build: "umbrella_dd_aoe", altBuild: "katana",         gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
   { name: "LuminarA",        build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
   { name: "LuoJue-Lin",      build: "tank",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "фулл танк" },
@@ -119,7 +119,7 @@ const PLAYERS = [
   { name: "Jianggi",         build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
   { name: "OldRock",         build: "tank",            altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: "attack", roles: ["officer"], note: "" },
   { name: "Espeir",          build: "nameless",        altBuild: null,              gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
-  { name: "Endurist",        build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["ranger"], note: "" },
+  { name: "Endurist",        build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["Jungle"], note: "" },
   { name: "Aiswill",         build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "StanislavZal",    build: null,              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
   { name: "arhangels",       build: "heal",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
