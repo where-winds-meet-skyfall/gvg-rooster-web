@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="uk">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ростер гильдии</title>
+  <title>Ростер гільдії</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="site-title">Ростер гильдии</h1>
+    <h1 class="site-title">Ростер гільдії</h1>
     <button id="legend-toggle" class="btn-legend" aria-expanded="true" aria-controls="legend">
       Легенда <span class="legend-arrow">▾</span>
     </button>
@@ -17,28 +17,28 @@
 
   <div id="legend" class="legend"></div>
 
-  <div class="view-tabs" role="tablist" aria-label="Режим просмотра">
-    <button class="tab active" data-view="list"    role="tab" aria-selected="true">Все</button>
-    <button class="tab"        data-view="grouped" role="tab" aria-selected="false">По билдам</button>
-    <button class="tab"        data-view="ready"   role="tab" aria-selected="false">На бой</button>
+  <div class="view-tabs" role="tablist" aria-label="Режим перегляду">
+    <button class="tab active" data-view="list"    role="tab" aria-selected="true">Гравці</button>
+    <button class="tab"        data-view="grouped" role="tab" aria-selected="false">По білдах</button>
+    <button class="tab"        data-view="battle"  role="tab" aria-selected="false">Бойова пачка</button>
   </div>
 
   <details class="filters-panel" open>
-    <summary class="filters-summary">Фильтры</summary>
+    <summary class="filters-summary">Фільтри</summary>
     <div class="filters-body">
 
       <div class="filter-row">
         <input type="text" id="search" class="input-search"
-               placeholder="Поиск по имени…" autocomplete="off" spellcheck="false">
+               placeholder="Пошук за іменем…" autocomplete="off" spellcheck="false">
       </div>
 
       <div class="filter-row">
-        <span class="filter-label">Основной билд:</span>
+        <span class="filter-label">Основний білд:</span>
         <div id="build-filters" class="pill-group"></div>
       </div>
 
       <div class="filter-row">
-        <span class="filter-label">Альт-билд:</span>
+        <span class="filter-label">Альт-білд:</span>
         <div id="alt-build-filters" class="pill-group"></div>
       </div>
 
@@ -52,30 +52,28 @@
         <div id="role-filters" class="pill-group"></div>
       </div>
 
-      <div class="filter-row filter-row--inline">
-        <span class="filter-label">Шмот:</span>
-        <input type="number" id="gear-min" class="input-gear" placeholder="от" min="0">
-        <span class="range-sep">—</span>
-        <input type="number" id="gear-max" class="input-gear" placeholder="до" min="0">
+      <div class="filter-row">
+        <span class="filter-label">Спорядження:</span>
+        <div id="gear-filters" class="pill-group"></div>
       </div>
 
       <div class="filter-row filter-row--inline filter-row--between">
         <label class="toggle-label">
           <input type="checkbox" id="ready-only" class="checkbox-ready">
-          Только готовые
+          Тільки готові
         </label>
         <div class="sort-controls">
-          <select id="sort-field" class="select-sort" aria-label="Сортировка по полю">
-            <option value="name">По имени</option>
-            <option value="gearLevel">По шмоту</option>
-            <option value="build">По билду</option>
+          <select id="sort-field" class="select-sort" aria-label="Сортування за полем">
+            <option value="name">За іменем</option>
+            <option value="gearLevel">За спорядженням</option>
+            <option value="build">За білдом</option>
           </select>
-          <button id="sort-dir" class="btn-sort-dir" title="Направление сортировки">↑</button>
+          <button id="sort-dir" class="btn-sort-dir" title="Напрямок сортування">↑</button>
         </div>
       </div>
 
       <div class="filter-row filter-row--right">
-        <button id="reset-filters" class="btn-reset">Сбросить фильтры</button>
+        <button id="reset-filters" class="btn-reset">Скинути фільтри</button>
       </div>
 
     </div>

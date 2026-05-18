@@ -6,15 +6,20 @@ const SQUADS = {
   def:    { label: 'Def',    color: '#3b82f6' }
 };
 
+const GEAR_TIERS = {
+  low:  { label: 'Низький',  color: '#64748b' },
+  mid:  { label: 'Середній', color: '#f59e0b' },
+  high: { label: 'Високий',  color: '#22c55e' }
+};
+
 const state = {
-  viewMode: 'list', // 'list' | 'grouped' | 'ready'
+  viewMode: 'list', // 'list' | 'grouped' | 'battle'
   filters: {
-    builds:    new Set(), // выбранные ключи основного билда
-    altBuilds: new Set(), // выбранные ключи альт-билда
+    builds:    new Set(), // обрані ключі основного білда
+    altBuilds: new Set(), // обрані ключі альт-білда
     squads:    new Set(), // 'attack' | 'def'
-    roles:     new Set(), // строки ролей
-    gearMin:   '',
-    gearMax:   '',
+    roles:     new Set(), // рядки ролей
+    gears:     new Set(),
     readyOnly: false,
     name:      ''
   },
@@ -28,8 +33,7 @@ const $statsBar     = document.getElementById('stats-bar');
 const $search       = document.getElementById('search');
 const $buildFilters = document.getElementById('build-filters');
 const $altFilters   = document.getElementById('alt-build-filters');
-const $gearMin      = document.getElementById('gear-min');
-const $gearMax      = document.getElementById('gear-max');
+const $gearFilters  = document.getElementById('gear-filters');
 const $readyOnly     = document.getElementById('ready-only');
 const $sortField     = document.getElementById('sort-field');
 const $sortDir       = document.getElementById('sort-dir');
@@ -68,9 +72,15 @@ function roleBadge(role) {
   return `<span class="badge badge--role">${esc(role)}</span>`;
 }
 
+function gearBadge(level) {
+  const t = GEAR_TIERS[level];
+  if (!t) return level ? `<span class="gear-level">⚔ ${esc(String(level))}</span>` : '';
+  return `<span class="gear-badge" style="border-color:${t.color};color:${t.color}">⚔ ${esc(t.label)}</span>`;
+}
+
 /* ─── Data processing ───────────────────────────────────────────────────── */
 function filterPlayers(players) {
-  const { builds, altBuilds, squads, roles, gearMin, gearMax, readyOnly, name } = state.filters;
+  const { builds, altBuilds, squads, roles, gears, readyOnly, name } = state.filters;
   return players.filter(p => {
     if (name           && !p.name.toLowerCase().includes(name))          return false;
     if (builds.size    && !builds.has(p.build))                          return false;
@@ -81,8 +91,7 @@ function filterPlayers(players) {
       const hasAny = [...roles].some(r => pr.includes(r));
       if (!hasAny) return false;
     }
-    if (gearMin !== '' && p.gearLevel < +gearMin)                        return false;
-    if (gearMax !== '' && p.gearLevel > +gearMax)                        return false;
+    if (gears.size     && !gears.has(p.gearLevel))                       return false;
     if (readyOnly      && !p.ready)                                      return false;
     return true;
   });
@@ -92,21 +101,24 @@ function sortPlayers(players) {
   const { field, dir } = state.sort;
   const m = dir === 'asc' ? 1 : -1;
   return [...players].sort((a, b) => {
-    if (field === 'gearLevel') return m * (a.gearLevel - b.gearLevel);
+    if (field === 'gearLevel') {
+      const ord = { low: 0, mid: 1, high: 2 };
+      return m * ((ord[a.gearLevel] ?? 1) - (ord[b.gearLevel] ?? 1));
+    }
     if (field === 'build') {
       const la = getBuild(a.build)?.label ?? a.build ?? '';
       const lb = getBuild(b.build)?.label ?? b.build ?? '';
-      return m * la.localeCompare(lb, 'ru');
+      return m * la.localeCompare(lb, 'uk');
     }
-    return m * a.name.localeCompare(b.name, 'ru');
+    return m * a.name.localeCompare(b.name, 'uk');
   });
 }
 
 /* ─── Card ──────────────────────────────────────────────────────────────── */
 function playerCard(p) {
   const readyLabel = p.ready
-    ? '<span class="ready-status ready">✓ Готов</span>'
-    : '<span class="ready-status not-ready">✗ Нет</span>';
+    ? '<span class="ready-status ready">✓ Готовий</span>'
+    : '<span class="ready-status not-ready">✗ Ні</span>';
   const noteHtml = p.note
     ? `<div class="player-note">${esc(p.note)}</div>`
     : '';
@@ -121,7 +133,7 @@ function playerCard(p) {
   </div>
   <div class="card-body">
     <div class="player-badges">${badge(p.build)}${p.altBuild ? badge(p.altBuild, true) : ''}</div>
-    <span class="gear-level">⚔ ${esc(String(p.gearLevel))}</span>
+    ${gearBadge(p.gearLevel)}
   </div>
   ${roleHtml}
   ${noteHtml}
@@ -130,13 +142,13 @@ function playerCard(p) {
 
 /* ─── View renderers ────────────────────────────────────────────────────── */
 function viewList(players) {
-  if (!players.length) return '<p class="empty">Нет игроков по заданным критериям.</p>';
+  if (!players.length) return '<p class="empty">Немає гравців за заданими критеріями.</p>';
   return `<div class="player-grid">${players.map(playerCard).join('')}</div>`;
 }
 
 function viewGrouped(players) {
   const groups = {};
-  // Порядок секций = порядок ключей в BUILDS
+  // Порядок секцій = порядок ключів у BUILDS
   Object.keys(BUILDS).forEach(k => { groups[k] = []; });
   players.forEach(p => {
     if (p.build in groups) {
@@ -151,12 +163,12 @@ function viewGrouped(players) {
     .filter(([, arr]) => arr.length > 0)
     .map(([key, arr]) => {
       const b     = BUILDS[key];
-      const label = b?.label ?? 'Прочие';
+      const label = b?.label ?? 'Інші';
       const color = b?.color ?? '#64748b';
       return `<section class="build-group">
   <h2 class="group-header" style="border-color:${color}">
     <span class="badge" style="background:${color}">${esc(label)}</span>
-    <span class="group-count">${arr.length} игр.</span>
+    <span class="group-count">${arr.length} гравців</span>
   </h2>
   <div class="player-grid">${arr.map(playerCard).join('')}</div>
 </section>`;
@@ -164,27 +176,91 @@ function viewGrouped(players) {
 
   return sections.length
     ? sections.join('\n')
-    : '<p class="empty">Нет игроков.</p>';
+    : '<p class="empty">Немає гравців.</p>';
 }
 
-function viewReady(players) {
-  const readyPlayers = players.filter(p => p.ready);
+/* ─── Battle View ───────────────────────────────────────────────────────── */
+function battlePlayerRow(p) {
+  const noteHtml  = p.note ? `<span class="battle-player-note">${esc(p.note)}</span>` : '';
+  const roleHtml  = (p.roles && p.roles.length)
+    ? `<div class="battle-player-extras">${p.roles.map(roleBadge).join('')}</div>`
+    : '';
+  return `<div class="battle-player-row">
+  <span class="battle-player-name">${esc(p.name)}</span>
+  <div class="battle-player-badges">${badge(p.build)}${p.altBuild ? badge(p.altBuild, true) : ''}</div>
+  <span class="battle-gear">${gearBadge(p.gearLevel)}</span>
+  ${roleHtml}${noteHtml}
+</div>`;
+}
 
-  // Сводка по билдам
+function renderBattleSquad(squad, players) {
+  const squadInfo = squad ? SQUADS[squad] : { label: 'Нерозподілені', color: '#64748b' };
+  const icon = squad === 'attack' ? '⚔' : squad === 'def' ? '🛡' : '?';
+
+  // Group by build (preserving BUILDS order)
+  const groups = {};
+  Object.keys(BUILDS).forEach(k => { groups[k] = []; });
+  players.forEach(p => {
+    if (p.build in groups) groups[p.build].push(p);
+    else { groups['__other__'] = groups['__other__'] || []; groups['__other__'].push(p); }
+  });
+
+  const buildSections = Object.entries(groups)
+    .filter(([, arr]) => arr.length > 0)
+    .map(([key, arr]) => {
+      const b     = BUILDS[key];
+      const label = b?.label ?? 'Інші';
+      const color = b?.color ?? '#64748b';
+      return `<div class="battle-build-group">
+  <div class="battle-build-header" style="border-color:${color}">
+    <span class="badge" style="background:${color}">${esc(label)}</span>
+    <span class="group-count">${arr.length}</span>
+  </div>
+  <div class="battle-rows">${arr.map(battlePlayerRow).join('')}</div>
+</div>`;
+    });
+
+  return `<section class="battle-squad-section">
+  <h2 class="battle-squad-header" style="--squad-color:${squadInfo.color}">
+    <span class="battle-squad-icon">${icon}</span>
+    <span class="battle-squad-name">${esc(squadInfo.label)}</span>
+    <span class="group-count">${players.length} гравців</span>
+  </h2>
+  <div class="battle-builds">${buildSections.join('\n')}</div>
+</section>`;
+}
+
+function viewBattle(players) {
+  const ready = players.filter(p => p.ready);
+  if (!ready.length) return '<p class="empty">Немає готових гравців.</p>';
+
+  const attack  = ready.filter(p => p.squad === 'attack');
+  const def     = ready.filter(p => p.squad === 'def');
+  const noSquad = ready.filter(p => !p.squad);
+
+  // Stats bar
   const counts = {};
-  readyPlayers.forEach(p => { counts[p.build] = (counts[p.build] || 0) + 1; });
-  const pills = Object.entries(counts).map(([k, n]) => {
+  ready.forEach(p => { counts[p.build] = (counts[p.build] || 0) + 1; });
+  const buildPills = Object.entries(counts).map(([k, n]) => {
     const b = BUILDS[k];
-    if (!b) return '';
-    return `<span class="stat-pill" style="background:${b.color}">${esc(b.label)}: ${n}</span>`;
+    return b ? `<span class="stat-pill" style="background:${b.color}">${esc(b.label)}: ${n}</span>` : '';
   }).join('');
 
   $statsBar.innerHTML = `<div class="stats-summary">
-  <strong>Готовы: ${readyPlayers.length}</strong>${pills ? ' ' + pills : ''}
+  <strong>Готові: ${ready.length}</strong>
+  ${attack.length  ? `<span class="stat-pill" style="background:#ef4444">Attack: ${attack.length}</span>`  : ''}
+  ${def.length     ? `<span class="stat-pill" style="background:#3b82f6">Def: ${def.length}</span>`        : ''}
+  ${noSquad.length ? `<span class="stat-pill" style="background:#64748b">?: ${noSquad.length}</span>`      : ''}
+  ${buildPills}
 </div>`;
   $statsBar.classList.remove('hidden');
 
-  return viewGrouped(readyPlayers);
+  const sections = [];
+  if (attack.length)  sections.push(renderBattleSquad('attack', attack));
+  if (def.length)     sections.push(renderBattleSquad('def',    def));
+  if (noSquad.length) sections.push(renderBattleSquad(null,     noSquad));
+
+  return sections.join('\n');
 }
 
 /* ─── Main render ───────────────────────────────────────────────────────── */
@@ -195,7 +271,7 @@ function render() {
 
   switch (state.viewMode) {
     case 'grouped': $roster.innerHTML = viewGrouped(sorted); break;
-    case 'ready':   $roster.innerHTML = viewReady(sorted);   break;
+    case 'battle':  $roster.innerHTML = viewBattle(sorted);  break;
     default:        $roster.innerHTML = viewList(sorted);
   }
 }
@@ -204,7 +280,7 @@ function render() {
 function initLegend() {
   const entries = Object.entries(BUILDS);
   if (!entries.length) {
-    $legend.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem">Билды не настроены — заполните BUILDS в data.js</span>';
+    $legend.innerHTML = '<span style="color:var(--text-muted);font-size:0.8rem">Білди не налаштовані — заповніть BUILDS у data.js</span>';
     return;
   }
 
@@ -247,7 +323,7 @@ function initSquadPills() {
   $squadFilters.innerHTML = Object.entries(SQUADS).map(([key, s]) =>
     `<button class="pill" data-key="${esc(key)}" data-filter="squads" style="--pill-color:${s.color}">${esc(s.label)}</button>`
   ).join('')
-  + `<button class="pill" data-key="__none__" data-filter="squads" style="--pill-color:#64748b">Не распределён</button>`;
+  + `<button class="pill" data-key="__none__" data-filter="squads" style="--pill-color:#64748b">Нерозподілені</button>`;
 }
 
 function initRolePills() {
@@ -255,12 +331,18 @@ function initRolePills() {
   $roleFilters.innerHTML = allRoles.map(r =>
     `<button class="pill" data-key="${esc(r)}" data-filter="roles" style="--pill-color:#94a3b8">${esc(r)}</button>`
   ).join('');
-  if (!allRoles.length) $roleFilters.innerHTML = '<span style="color:var(--text-muted);font-size:0.78rem">нет ролей</span>';
+  if (!allRoles.length) $roleFilters.innerHTML = '<span style="color:var(--text-muted);font-size:0.78rem">немає ролей</span>';
+}
+
+function initGearPills() {
+  $gearFilters.innerHTML = Object.entries(GEAR_TIERS).map(([key, t]) =>
+    `<button class="pill" data-key="${esc(key)}" data-filter="gears" style="--pill-color:${t.color}">${esc(t.label)}</button>`
+  ).join('');
 }
 
 /* ─── Events ────────────────────────────────────────────────────────────── */
 function initEvents() {
-  // Вкладки режима
+  // Вкладки режиму
   document.querySelectorAll('.tab').forEach(btn => {
     btn.addEventListener('click', () => {
       state.viewMode = btn.dataset.view;
@@ -272,7 +354,7 @@ function initEvents() {
     });
   });
 
-  // Поиск по имени (с небольшой задержкой)
+  // Пошук за іменем (з невеликою затримкою)
   let searchTimer;
   $search.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -282,7 +364,7 @@ function initEvents() {
     }, 150);
   });
 
-  // Пиллы фильтров (делегирование)
+  // Пільи фільтрів (делегування)
   document.addEventListener('click', e => {
     const pill = e.target.closest('.pill[data-filter]');
     if (!pill) return;
@@ -291,7 +373,8 @@ function initEvents() {
       builds:    state.filters.builds,
       altBuilds: state.filters.altBuilds,
       squads:    state.filters.squads,
-      roles:     state.filters.roles
+      roles:     state.filters.roles,
+      gears:     state.filters.gears
     };
     const set = setMap[filter];
     if (!set) return;
@@ -300,14 +383,10 @@ function initEvents() {
     render();
   });
 
-  // Уровень шмота
-  $gearMin.addEventListener('input', () => { state.filters.gearMin = $gearMin.value; render(); });
-  $gearMax.addEventListener('input', () => { state.filters.gearMax = $gearMax.value; render(); });
-
-  // Только готовые
+  // Тільки готові
   $readyOnly.addEventListener('change', () => { state.filters.readyOnly = $readyOnly.checked; render(); });
 
-  // Сортировка
+  // Сортування
   $sortField.addEventListener('change', () => { state.sort.field = $sortField.value; render(); });
   $sortDir.addEventListener('click', () => {
     state.sort.dir = state.sort.dir === 'asc' ? 'desc' : 'asc';
@@ -315,12 +394,10 @@ function initEvents() {
     render();
   });
 
-  // Сброс фильтров
+  // Скидання фільтрів
   document.getElementById('reset-filters').addEventListener('click', () => {
-    state.filters = { builds: new Set(), altBuilds: new Set(), squads: new Set(), roles: new Set(), gearMin: '', gearMax: '', readyOnly: false, name: '' };
+    state.filters = { builds: new Set(), altBuilds: new Set(), squads: new Set(), roles: new Set(), gears: new Set(), readyOnly: false, name: '' };
     $search.value      = '';
-    $gearMin.value     = '';
-    $gearMax.value     = '';
     $readyOnly.checked = false;
     document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
     render();
@@ -341,6 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initBuildPills();
   initSquadPills();
   initRolePills();
+  initGearPills();
   initEvents();
   render();
 });

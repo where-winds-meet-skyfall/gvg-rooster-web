@@ -1,15 +1,15 @@
 /**
- * КОНФИГ БИЛДОВ
- * Единственное место, где задаются доступные билды и их цвета.
- * Ключи в PLAYERS.build / PLAYERS.altBuild должны совпадать с ключами здесь.
- * Формат: ключ: { label: "Название", color: "#hex" }
+ * КОНФІГУРАЦІЯ БІЛДІВ
+ * єдине місце, де задаються доступні білди та їхні кольори.
+ * Ключі в PLAYERS.build / PLAYERS.altBuild мають збігатися з ключами тут.
+ * Формат: ключ: { label: "Назва", color: "#hex" }
  *
- * Пример:
- *   tank:    { label: "Танк",       color: "#3b82f6" },
- *   healer:  { label: "Хилер",      color: "#22c55e" },
- *   melee:   { label: "Ближний ДД", color: "#ef4444" },
- *   ranged:  { label: "Дальний ДД", color: "#f59e0b" },
- *   support: { label: "Саппорт",    color: "#a855f7" },
+ * Приклад:
+ *   tank:    { label: "Tank",    color: "#3b82f6" },
+ *   healer:  { label: "Healer",  color: "#22c55e" },
+ *   melee:   { label: "Melee DD", color: "#ef4444" },
+ *   ranged:  { label: "Ranged DD", color: "#f59e0b" },
+ *   support: { label: "Support",  color: "#a855f7" },
  */
 const BUILDS = {
   // ── Heal ──────────────────────────────────────────
@@ -76,22 +76,46 @@ const BUILDS = {
 };
 
 /**
- * СПИСОК ИГРОКОВ ГИЛЬДИИ
+ * СПИСОК ГРАВЦІВ ГІЛЬДІЇ
  * Поля:
- *   name      — игровое имя
- *   build     — ключ основного билда из BUILDS
- *   altBuild  — ключ альт-билда из BUILDS, либо null
- *   gearLevel — уровень шмота (число)
- *   ready     — готов ли на бой 30×30 (true / false)
- *   squad     — пачка: "attack" | "def" | null (не распределён)
- *   roles     — массив доп. ролей: [] | ["officer"] | ["ranger"] | ["ninja"] и т.д.
- *   note      — тактическая заметка ("фокус", "фланг", "защита точки" и т.п.), либо ""
+ *   name      — ігрове ім'я
+ *   build     — ключ основного білда з BUILDS
+ *   altBuild  — ключ альт-білда з BUILDS, або null
+ *   gearLevel — рівень спорядження: "low" | "mid" | "high"
+ *   ready     — готовий до бою 30×30 (true / false)
+ *   squad     — пачка: "attack" | "def" | null (нерозподілений)
+ *   roles     — масив додаткових ролей: [] | ["officer"] | ["ranger"] | ["ninja"] тощо
+ *   note      — тактична нотатка ("фокус", фланг, захист точки тощо), або ""
  *
- * Пример:
- *   { name: "Tankmaster", build: "tank",   altBuild: null,      gearLevel: 2100, ready: true,  squad: "def",    roles: ["officer"], note: "фокус" },
- *   { name: "HolyLight",  build: "heal",   altBuild: null,      gearLevel: 1950, ready: true,  squad: "attack", roles: [],          note: "" },
- *   { name: "ShadowX",    build: "duals",  altBuild: null,      gearLevel: 1780, ready: false, squad: null,     roles: ["ranger"],   note: "фланг" },
+ * Приклад:
+ *   { name: "Tankmaster", build: "tank",   altBuild: null,      gearLevel: "mid", ready: true,  squad: "def",    roles: ["officer"], note: "фокус" },
+ *   { name: "HolyLight",  build: "heal",   altBuild: null,      gearLevel: "mid", ready: true,  squad: "attack", roles: [],          note: "" },
+ *   { name: "ShadowX",    build: "duals",  altBuild: null,      gearLevel: "mid", ready: false, squad: null,     roles: ["ranger"],   note: "фланг" },
  */
 const PLAYERS = [
-  // Добавить игроков здесь
+  { name: "LELUSH",          build: "tank",            altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: null, roles: [], note: "гібрид: Mo Blade + Inkwell Fan; чистий танк" },
+  { name: "QiShye",          build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "SunRise",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "Nixmoonky",       build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "LuthiXia",        build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "MasterFoobar",    build: "tank",            altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "чистий танк" },
+  { name: "PonIka",          build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "AUrory",          build: "umbrella_dd",     altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "ArthurPencilgun", build: "duals",           altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "lHanLil",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "Nanami",          build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "чистий хіл" },
+  { name: "Chifusama",       build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "EnEr",            build: "umbrella_dd_aoe", altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "CantBeTouched",   build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "MariSkywalker",   build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "Kelevra",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "datsann",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "CyMþak",          build: "strategic",       altBuild: "nameless",       gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "Kirito_AL",       build: "umbrella_dd_aoe", altBuild: "katana",         gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "LuminarA",        build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "LuoJue-Lin",      build: "tank",            altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "фулл танк" },
+  { name: "BayarD",          build: "strategic",       altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "може замінити спис на стяжку" },
+  { name: "Geerion",         build: "nameless",        altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "Jianggi",         build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "OldRock",         build: "tank",            altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
 ];

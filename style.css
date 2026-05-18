@@ -346,7 +346,17 @@ details[open] .filters-summary::before { content: "▾"; }
   background: transparent !important;
   border: 1.5px solid; /* color и border-color задаются inline */
 }
-
+.gear-badge {
+  display: inline-block;
+  background: transparent;
+  border: 1.5px solid;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
 /* ─── Roster / Cards ────────────────────────────────────────────────────── */
 .roster {
   padding: 14px 16px;
@@ -504,4 +514,107 @@ details[open] .filters-summary::before { content: "▾"; }
   .site-title    { font-size: 0.9rem; }
   .filter-label  { min-width: 70px; }
   .tab           { padding: 10px 10px; font-size: 0.8rem; }
+}
+
+/* ─── Battle View ───────────────────────────────────────────────────────── */
+.battle-squad-section {
+  margin-bottom: 24px;
+}
+
+.battle-squad-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--squad-color, var(--surface-2)) 14%, var(--surface-2));
+  border-left: 4px solid var(--squad-color, var(--border));
+  border-radius: var(--radius-sm);
+  margin-bottom: 10px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.battle-squad-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.battle-squad-name {
+  flex: 1;
+}
+
+.battle-builds {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.battle-build-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.battle-build-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px;
+  background: var(--surface-2);
+  border-left: 3px solid;
+}
+
+.battle-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.battle-player-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.battle-player-row:first-child {
+  border-top: none;
+}
+
+.battle-player-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  min-width: 90px;
+  flex: 1;
+}
+
+.battle-player-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.battle-gear {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  font-weight: 500;
+  margin-left: auto;
+}
+
+.battle-player-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+}
+
+.battle-player-note {
+  width: 100%;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  padding-top: 2px;
 }
