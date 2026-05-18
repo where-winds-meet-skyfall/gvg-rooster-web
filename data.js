@@ -24,7 +24,7 @@ const BUILDS = {
   // ── DD ────────────────────────────────────────────
   umbrella_dd: {
     label:      "Umbrella DD",
-    color:      "#4ade80",
+    color:      "#f97316",
     category:   "DD",
     techniques: ["Inkwell (Fan)", "Vernal (Umbrella)"],
     weapons:    ["Fan", "Umbrella"]
@@ -61,7 +61,7 @@ const BUILDS = {
   // ── Tank ──────────────────────────────────────────
   tank: {
     label:      "Tank",
-    color:      "#9f1239",
+    color:      "#eab308",
     category:   "Tank",
     techniques: ["Thundercy Blade (Mo Blade)", "Stormbreaker (Spear)"],
     weapons:    ["Mo Blade", "Spear"]
@@ -118,4 +118,5 @@ const PLAYERS = [
   { name: "Geerion",         build: "nameless",        altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
   { name: "Jianggi",         build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
   { name: "OldRock",         build: "tank",            altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
+  { name: "Espeir",          build: "nameless",        altBuild: null,              gearLevel: "mid", ready: true,  squad: null, roles: [], note: "" },
 ];

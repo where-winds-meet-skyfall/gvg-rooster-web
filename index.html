@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ростер гільдії</title>
+  <title>Ростер GvG</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <header class="site-header">
-    <h1 class="site-title">Ростер гільдії</h1>
-    <button id="legend-toggle" class="btn-legend" aria-expanded="true" aria-controls="legend">
-      Легенда <span class="legend-arrow">▾</span>
+    <h1 class="site-title">Ростер GvG</h1>
+    <button id="legend-toggle" class="btn-legend" aria-expanded="false" aria-controls="legend">
+      Легенда <span class="legend-arrow">▸</span>
     </button>
   </header>
 
-  <div id="legend" class="legend"></div>
+  <div id="legend" class="legend hidden"></div>
 
   <div class="view-tabs" role="tablist" aria-label="Режим перегляду">
     <button class="tab active" data-view="list"    role="tab" aria-selected="true">Гравці</button>
@@ -23,7 +23,7 @@
     <button class="tab"        data-view="battle"  role="tab" aria-selected="false">Бойова пачка</button>
   </div>
 
-  <details class="filters-panel" open>
+  <details class="filters-panel">
     <summary class="filters-summary">Фільтри</summary>
     <div class="filters-body">
 

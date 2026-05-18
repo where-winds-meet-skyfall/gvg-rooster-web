@@ -63,47 +63,43 @@ body {
 /* ─── Legend ────────────────────────────────────────────────────────────── */
 .legend {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 10px 16px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 14px;
+  padding: 5px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 .legend.hidden { display: none; }
 .legend-cat {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 4px 0;
+  gap: 4px;
+  padding: 1px 0;
 }
 .legend-cat + .legend-cat {
-  border-top: 1px solid var(--border);
-  padding-top: 6px;
-  margin-top: 2px;
+  border-top: none;
+  padding-top: 1px;
+  margin-top: 0;
 }
 .legend-cat-label {
-  font-size: 0.68rem;
+  font-size: 0.62rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
-  padding-top: 4px;
-  min-width: 34px;
+  min-width: 28px;
 }
 .legend-item {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 0;
 }
 .legend-tech {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  display: none;
 }
 
 /* ─── View Tabs ─────────────────────────────────────────────────────────── */
