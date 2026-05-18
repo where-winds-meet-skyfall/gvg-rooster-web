@@ -165,13 +165,13 @@ function viewGrouped(players) {
       const b     = BUILDS[key];
       const label = b?.label ?? 'Інші';
       const color = b?.color ?? '#64748b';
-      return `<section class="build-group">
-  <h2 class="group-header" style="border-color:${color}">
+      return `<details class="build-group">
+  <summary class="group-header" style="border-color:${color}">
     <span class="badge" style="background:${color}">${esc(label)}</span>
     <span class="group-count">${arr.length} гравців</span>
-  </h2>
+  </summary>
   <div class="player-grid">${arr.map(playerCard).join('')}</div>
-</section>`;
+</details>`;
     });
 
   return sections.length

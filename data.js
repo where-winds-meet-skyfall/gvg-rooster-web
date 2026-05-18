@@ -94,7 +94,7 @@ const BUILDS = {
  */
 const PLAYERS = [
   { name: "LELUSH",          build: "tank",            altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: "def",    roles: ["officer", "ranger"], note: "гібрид: Mo Blade + Inkwell Fan; чистий танк" },
-  { name: "QiShye",          build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
+  { name: "QiShye",          build: "nameless",        altBuild: "heal",             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "SunRise",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["ranger"], note: "" },
   { name: "Nixmoonky",       build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "LuthiXia",        build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["officer"], note: "" },
@@ -123,6 +123,6 @@ const PLAYERS = [
   { name: "Aiswill",         build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "StanislavZal",    build: null,              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
   { name: "arhangels",       build: "heal",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
-  { name: "BlindMary",       build: null,              altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
+  { name: "BlindMary",       build: "strategic",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "Nanaaaaami",      build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
 ];

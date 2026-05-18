@@ -478,18 +478,35 @@ details[open] .filters-summary::before { content: "▾"; }
 }
 
 /* ─── Build Groups ──────────────────────────────────────────────────────── */
-.build-group { margin-bottom: 24px; }
+.build-group { margin-bottom: 8px; }
+
+.build-group > .player-grid {
+  margin-top: 10px;
+  margin-bottom: 14px;
+}
 
 .group-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--border); /* overridden inline per build */
+  padding: 8px 10px;
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
   font-size: 1rem;
   font-weight: 700;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
 }
+.group-header::-webkit-details-marker { display: none; }
+.group-header::before {
+  content: "▸";
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+}
+details[open] > .group-header::before { content: "▾"; }
 
 .group-count {
   font-size: 0.78rem;
