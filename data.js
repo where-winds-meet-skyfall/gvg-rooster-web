@@ -121,7 +121,7 @@ const PLAYERS = [
   { name: "Espeir",          build: "nameless",        altBuild: null,              gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "Endurist",        build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["Jungle"], note: "" },
   { name: "Aiswill",         build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
-  { name: "StanislavZal",    build: null,              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
+  { name: "StanislavZal",    build: "duals",              altBuild: "tank",             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "Гібрід: дуали + мо блейд(стяжка)" },
   { name: "arhangels",       build: "heal",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
   { name: "BlindMary",       build: "strategic",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "Nanaaaaami",      build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
