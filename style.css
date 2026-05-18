@@ -186,6 +186,21 @@ body::before {
 }
 .legend-tech { display: none; }
 
+.legend-cat--roles {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+}
+.legend-role-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-role-desc {
+  font-size: 0.70rem;
+  color: var(--text-muted);
+}
+
 /* ─── View Tabs ─────────────────────────────────────────────────────────── */
 .view-tabs {
   display: flex;
@@ -222,101 +237,106 @@ body::before {
 
 /* ─── Filters ───────────────────────────────────────────────────────────── */
 .filters-panel {
-  background: rgba(255,255,255,0.022);
+  background: rgba(255,255,255,0.010);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 .filters-summary {
-  padding: 10px 20px;
+  padding: 7px 20px;
   cursor: pointer;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-dim);
   user-select: none;
   list-style: none;
   display: flex;
   align-items: center;
-  gap: 7px;
-  letter-spacing: 0.02em;
+  gap: 6px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
   transition: color 0.2s;
 }
-.filters-summary:hover { color: var(--text); }
+.filters-summary:hover { color: var(--text-muted); }
 .filters-summary::-webkit-details-marker { display: none; }
-.filters-summary::before { content: "▸"; font-size: 0.7rem; }
+.filters-summary::before { content: "▸"; font-size: 0.60rem; }
 details[open] .filters-summary::before { content: "▾"; }
 
 .filters-body {
-  padding: 10px 20px 16px;
+  padding: 5px 20px 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 4px;
+  border-top: 1px solid rgba(255,255,255,0.04);
 }
 
 .filter-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 5px;
 }
 .filter-row--inline   { align-items: center; }
 .filter-row--between  { justify-content: space-between; flex-wrap: wrap; }
 .filter-row--right    { justify-content: flex-end; }
 
 .filter-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+  font-size: 0.59rem;
+  font-weight: 700;
+  color: var(--text-dim);
   white-space: nowrap;
-  padding-top: 4px;
-  min-width: 100px;
-  letter-spacing: 0.02em;
+  min-width: 80px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* ─── Pills ─────────────────────────────────────────────────────────────── */
 .pill-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 3px;
 }
 
 .pill {
-  background: rgba(255,255,255,0.04);
-  border: 1.5px solid var(--pill-color, rgba(255,255,255,0.15));
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
   color: var(--pill-color, var(--text-muted));
-  padding: 3px 12px;
+  padding: 2px 9px;
   border-radius: 999px;
-  font-size: 0.73rem;
+  font-size: 0.66rem;
   font-weight: 500;
   cursor: pointer;
-  line-height: 1.4;
-  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+  line-height: 1.6;
+  letter-spacing: 0.01em;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
 }
 .pill:hover {
-  background: rgba(255,255,255,0.08);
-  transform: translateY(-1px);
+  background: rgba(255,255,255,0.07);
+  border-color: color-mix(in srgb, var(--pill-color, rgba(255,255,255,0.3)) 50%, transparent);
 }
 .pill.active {
-  background: var(--pill-color, var(--accent));
-  color: #fff;
-  border-color: var(--pill-color, var(--accent));
-  box-shadow: 0 0 10px rgba(0,128,255,0.25);
+  background: color-mix(in srgb, var(--pill-color, var(--accent)) 16%, transparent);
+  color: var(--pill-color, var(--accent));
+  border-color: color-mix(in srgb, var(--pill-color, var(--accent)) 65%, transparent);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--pill-color, var(--accent)) 28%, transparent);
+  font-weight: 600;
 }
 
 /* ─── Inputs ────────────────────────────────────────────────────────────── */
 .input-search {
   width: 100%;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.07);
   color: var(--text);
-  padding: 8px 14px;
+  padding: 6px 12px;
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-size: 0.80rem;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 .input-search:focus {
   border-color: var(--cyan);
-  box-shadow: 0 0 0 2px rgba(0,217,255,0.14);
+  box-shadow: 0 0 0 2px rgba(0,217,255,0.10);
 }
 .input-search::placeholder { color: var(--text-dim); }
 

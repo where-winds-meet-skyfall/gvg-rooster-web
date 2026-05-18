@@ -79,6 +79,21 @@ const ROLE_ICONS = {
   'Ninja':   '🥷',
 };
 
+const ROLE_DESCRIPTIONS = {
+  'Officer': {
+    icon: '👑',
+    desc: 'Управляє командними абілками, командує в голосі'
+  },
+  'Jungle': {
+    icon: '🌿',
+    desc: 'Чистить ліс на старті (якщо на вежі), менеджить ліс по таймінгах'
+  },
+  'Ninja': {
+    icon: '🥷',
+    desc: 'Загін швидкого реагування'
+  },
+};
+
 function roleBadge(role) {
   const icon = ROLE_ICONS[role] ?? '';
   return `<span class="badge badge--role">${icon ? icon + ' ' : ''}${esc(role)}</span>`;
@@ -368,7 +383,7 @@ function initLegend() {
   });
 
   const cats = [...catOrder, ...Object.keys(groups).filter(c => !catOrder.includes(c))];
-  $legend.innerHTML = cats
+  const buildsHtml = cats
     .filter(cat => groups[cat])
     .map(cat => {
       const items = groups[cat].map(b => {
@@ -381,6 +396,17 @@ function initLegend() {
       return `<div class="legend-cat"><span class="legend-cat-label">${esc(cat)}</span>${items}</div>`;
     })
     .join('');
+
+  const rolesHtml = Object.entries(ROLE_DESCRIPTIONS)
+    .map(([key, r]) =>
+      `<div class="legend-role-item">
+  <span class="badge badge--role">${r.icon} ${esc(key)}</span>
+  <span class="legend-role-desc">${esc(r.desc)}</span>
+</div>`
+    ).join('');
+
+  $legend.innerHTML = buildsHtml
+    + `<div class="legend-cat legend-cat--roles"><span class="legend-cat-label">Ролі</span>${rolesHtml}</div>`;
 }
 
 function initBuildPills() {
@@ -393,24 +419,27 @@ function initBuildPills() {
   makePills($altFilters,   'altBuilds');
 }
 
+const SQUAD_ICONS = { attack: '⚔', def: '🛡' };
 function initSquadPills() {
   $squadFilters.innerHTML = Object.entries(SQUADS).map(([key, s]) =>
-    `<button class="pill" data-key="${esc(key)}" data-filter="squads" style="--pill-color:${s.color}">${esc(s.label)}</button>`
+    `<button class="pill" data-key="${esc(key)}" data-filter="squads" style="--pill-color:${s.color}">${(SQUAD_ICONS[key] ?? '') + ' ' + esc(s.label)}</button>`
   ).join('')
-  + `<button class="pill" data-key="__none__" data-filter="squads" style="--pill-color:#64748b">Нерозподілені</button>`;
+  + `<button class="pill" data-key="__none__" data-filter="squads" style="--pill-color:#64748b">· Нерозподілені</button>`;
 }
 
 function initRolePills() {
   const allRoles = [...new Set(PLAYERS.flatMap(p => p.roles || []))];
-  $roleFilters.innerHTML = allRoles.map(r =>
-    `<button class="pill" data-key="${esc(r)}" data-filter="roles" style="--pill-color:#94a3b8">${esc(r)}</button>`
-  ).join('');
+  $roleFilters.innerHTML = allRoles.map(r => {
+    const icon = ROLE_ICONS[r] ?? '';
+    return `<button class="pill" data-key="${esc(r)}" data-filter="roles" style="--pill-color:#94a3b8">${icon ? icon + ' ' : ''}${esc(r)}</button>`;
+  }).join('');
   if (!allRoles.length) $roleFilters.innerHTML = '<span style="color:var(--text-muted);font-size:0.78rem">немає ролей</span>';
 }
 
+const GEAR_ICONS = { low: '▱', mid: '▰▱', high: '▰▰' };
 function initGearPills() {
   $gearFilters.innerHTML = Object.entries(GEAR_TIERS).map(([key, t]) =>
-    `<button class="pill" data-key="${esc(key)}" data-filter="gears" style="--pill-color:${t.color}">${esc(t.label)}</button>`
+    `<button class="pill" data-key="${esc(key)}" data-filter="gears" style="--pill-color:${t.color}">${(GEAR_ICONS[key] ?? '') + ' ' + esc(t.label)}</button>`
   ).join('');
 }
 

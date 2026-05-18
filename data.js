@@ -69,7 +69,7 @@ const BUILDS = {
   katana: {
     label:      "⚔️ Katana",
     color:      "#be123c",
-    category:   "Tank",
+    category:   "DD",
     techniques: ["Snowparting (Mo Blade)", "Phalanxbane (Katana)"],
     weapons:    ["Mo Blade", "Katana"]
   }
