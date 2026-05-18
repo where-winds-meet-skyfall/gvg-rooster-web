@@ -3,7 +3,7 @@
 /* ─── State ─────────────────────────────────────────────────────────────── */
 const SQUADS = {
   attack: { label: 'Attack', color: '#ef4444' },
-  def:    { label: 'Def',    color: '#3b82f6' }
+  def:    { label: 'Defence',    color: '#3b82f6' }
 };
 
 const GEAR_TIERS = {
@@ -74,9 +74,9 @@ function squadBadge(squad) {
 }
 
 const ROLE_ICONS = {
-  'officer': '👑',
+  'Officer': '👑',
   'Jungle':  '🌿',
-  'ninja':   '🥷',
+  'Ninja':   '🥷',
 };
 
 function roleBadge(role) {
@@ -267,7 +267,7 @@ function bvColumn(squad) {
   const isAtk = squad === 'attack';
   const color = isAtk ? '#ef4444' : '#3b82f6';
   const icon  = isAtk ? '⚔️' : '🛡️';
-  const label = isAtk ? 'Attack' : 'Def';
+  const label = isAtk ? 'Attack' : 'Defence';
   const mainFilled = battleSlots[squad].main.filter(Boolean).length;
   const resFilled  = battleSlots[squad].reserve.filter(Boolean).length;
   const mainSlots  = Array.from({length: 20}, (_, i) => bvSlot(squad, 'main', i)).join('');
@@ -294,7 +294,7 @@ function viewBattle() {
 
   $statsBar.innerHTML = `<div class="stats-summary">
   <span class="stat-pill" style="background:#ef4444">⚔️ Attack: ${atkFilled}</span>
-  <span class="stat-pill" style="background:#3b82f6">🛡️ Def: ${defFilled}</span>
+  <span class="stat-pill" style="background:#3b82f6">🛡️ Defence: ${defFilled}</span>
   ${free.length ? `<span class="stat-pill" style="background:#64748b">🔄 Вільні: ${free.length}</span>` : ''}
 </div>`;
   $statsBar.classList.remove('hidden');
@@ -631,6 +631,34 @@ function initEvents() {
     render();
   });
 }
+
+/* ─── Aurora background (random on load) ───────────────────────────────── */
+const AURORA_PRESETS = [
+  // 0%
+  `radial-gradient(ellipse 80% 60% at 15% 40%, rgba(0,128,255,0.14) 0%, transparent 65%),
+   radial-gradient(ellipse 60% 50% at 85% 15%, rgba(255,20,147,0.11) 0%, transparent 60%),
+   radial-gradient(ellipse 70% 60% at 55% 85%, rgba(0,217,255,0.10) 0%, transparent 65%),
+   radial-gradient(ellipse 50% 40% at 80% 65%, rgba(139,92,246,0.10) 0%, transparent 55%)`,
+  // 33%
+  `radial-gradient(ellipse 70% 50% at 30% 20%, rgba(0,128,255,0.16) 0%, transparent 65%),
+   radial-gradient(ellipse 80% 60% at 75% 75%, rgba(255,20,147,0.09) 0%, transparent 65%),
+   radial-gradient(ellipse 60% 40% at 20% 70%, rgba(0,217,255,0.12) 0%, transparent 60%),
+   radial-gradient(ellipse 60% 50% at 90% 30%, rgba(139,92,246,0.11) 0%, transparent 60%)`,
+  // 66%
+  `radial-gradient(ellipse 60% 70% at 50% 55%, rgba(0,128,255,0.12) 0%, transparent 60%),
+   radial-gradient(ellipse 50% 40% at 20% 45%, rgba(255,20,147,0.13) 0%, transparent 55%),
+   radial-gradient(ellipse 80% 50% at 80% 20%, rgba(0,217,255,0.11) 0%, transparent 70%),
+   radial-gradient(ellipse 40% 60% at 35% 85%, rgba(139,92,246,0.12) 0%, transparent 55%)`,
+  // 100%
+  `radial-gradient(ellipse 90% 50% at 70% 30%, rgba(0,128,255,0.12) 0%, transparent 70%),
+   radial-gradient(ellipse 60% 60% at 40% 80%, rgba(255,20,147,0.10) 0%, transparent 60%),
+   radial-gradient(ellipse 50% 70% at 90% 60%, rgba(0,217,255,0.13) 0%, transparent 65%),
+   radial-gradient(ellipse 70% 40% at 10% 20%, rgba(139,92,246,0.09) 0%, transparent 55%)`,
+];
+document.documentElement.style.setProperty(
+  '--aurora-bg',
+  AURORA_PRESETS[Math.floor(Math.random() * AURORA_PRESETS.length)]
+);
 
 /* ─── Bootstrap ─────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
