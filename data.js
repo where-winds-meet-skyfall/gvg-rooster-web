@@ -121,4 +121,8 @@ const PLAYERS = [
   { name: "Espeir",          build: "nameless",        altBuild: null,              gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "Endurist",        build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["ranger"], note: "" },
   { name: "Aiswill",         build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
+  { name: "StanislavZal",    build: null,              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
+  { name: "arhangels",       build: "heal",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
+  { name: "BlindMary",       build: null,              altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
+  { name: "Nanaaaaami",      build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
 ];
