@@ -26,6 +26,11 @@ const state = {
   sort: { field: 'name', dir: 'asc' }
 };
 
+let battleEditMode = false;
+const battleReserves = new Set(); // імена гравців у резервному слоті
+let battleSlots = null;           // { attack: { main:[×20], reserve:[×5] }, def: same }
+let _battleSquadSnapshot = null;  // для кнопки «скинути»
+
 /* ─── DOM refs ──────────────────────────────────────────────────────────── */
 const $roster       = document.getElementById('roster');
 const $legend       = document.getElementById('legend');
@@ -186,88 +191,147 @@ function viewGrouped(players) {
     : '<p class="empty">Немає гравців.</p>';
 }
 
-/* ─── Battle View ───────────────────────────────────────────────────────── */
-function battlePlayerRow(p) {
-  const noteHtml  = p.note ? `<span class="battle-player-note">${esc(p.note)}</span>` : '';
-  const roleHtml  = (p.roles && p.roles.length)
-    ? `<div class="battle-player-extras">${p.roles.map(roleBadge).join('')}</div>`
-    : '';
-  return `<div class="battle-player-row">
-  <span class="battle-player-name">${esc(p.name)}</span>
-  <div class="battle-player-badges">${badge(p.build)}${p.altBuild ? badge(p.altBuild, true) : ''}</div>
-  <span class="battle-gear">${gearBadge(p.gearLevel)}</span>
-  ${roleHtml}${noteHtml}
-</div>`;
-}
-
-function renderBattleSquad(squad, players) {
-  const squadInfo = squad ? SQUADS[squad] : { label: 'Нерозподілені', color: '#64748b' };
-  const icon = squad === 'attack' ? '⚔' : squad === 'def' ? '🛡' : '?';
-
-  // Group by build (preserving BUILDS order)
-  const groups = {};
-  Object.keys(BUILDS).forEach(k => { groups[k] = []; });
-  players.forEach(p => {
-    if (p.build in groups) groups[p.build].push(p);
-    else { groups['__other__'] = groups['__other__'] || []; groups['__other__'].push(p); }
+/* ─── Battle View (redesigned) ─────────────────────────────────────────── */
+function initBattleSlots() {
+  const sorted = sortPlayers(PLAYERS);
+  battleSlots = {
+    attack: { main: Array(20).fill(null), reserve: Array(5).fill(null) },
+    def:    { main: Array(20).fill(null), reserve: Array(5).fill(null) },
+  };
+  let ai = 0, ari = 0, di = 0, dri = 0;
+  sorted.forEach(p => {
+    if (p.squad === 'attack') {
+      if (battleReserves.has(p.name)) { if (ari < 5)  battleSlots.attack.reserve[ari++] = p.name; }
+      else                            { if (ai  < 20) battleSlots.attack.main[ai++]     = p.name; }
+    } else if (p.squad === 'def') {
+      if (battleReserves.has(p.name)) { if (dri < 5)  battleSlots.def.reserve[dri++]   = p.name; }
+      else                            { if (di  < 20) battleSlots.def.main[di++]        = p.name; }
+    }
   });
-
-  const buildSections = Object.entries(groups)
-    .filter(([, arr]) => arr.length > 0)
-    .map(([key, arr]) => {
-      const b     = BUILDS[key];
-      const label = b?.label ?? 'Інші';
-      const color = b?.color ?? '#64748b';
-      return `<div class="battle-build-group">
-  <div class="battle-build-header" style="border-color:${color}">
-    <span class="badge" style="background:${color}">${esc(label)}</span>
-    <span class="group-count">${arr.length}</span>
-  </div>
-  <div class="battle-rows">${arr.map(battlePlayerRow).join('')}</div>
-</div>`;
-    });
-
-  return `<section class="battle-squad-section">
-  <h2 class="battle-squad-header" style="--squad-color:${squadInfo.color}">
-    <span class="battle-squad-icon">${icon}</span>
-    <span class="battle-squad-name">${esc(squadInfo.label)}</span>
-    <span class="group-count">${players.length} гравців</span>
-  </h2>
-  <div class="battle-builds">${buildSections.join('\n')}</div>
-</section>`;
 }
 
-function viewBattle(players) {
-  const ready = players.filter(p => p.ready);
-  if (!ready.length) return '<p class="empty">Немає готових гравців.</p>';
+function removeFromSlots(name) {
+  for (const sq of ['attack', 'def']) {
+    for (const zone of ['main', 'reserve']) {
+      const idx = battleSlots[sq][zone].indexOf(name);
+      if (idx !== -1) battleSlots[sq][zone][idx] = null;
+    }
+  }
+}
 
-  const attack  = ready.filter(p => p.squad === 'attack');
-  const def     = ready.filter(p => p.squad === 'def');
-  const noSquad = ready.filter(p => !p.squad);
+function snapshotBattle() {
+  _battleSquadSnapshot = {
+    squads:   PLAYERS.map(p => ({ name: p.name, squad: p.squad })),
+    slots:    {
+      attack: { main: [...battleSlots.attack.main], reserve: [...battleSlots.attack.reserve] },
+      def:    { main: [...battleSlots.def.main],    reserve: [...battleSlots.def.reserve]    },
+    },
+    reserves: new Set(battleReserves),
+  };
+}
 
-  // Stats bar
-  const counts = {};
-  ready.forEach(p => { counts[p.build] = (counts[p.build] || 0) + 1; });
-  const buildPills = Object.entries(counts).map(([k, n]) => {
-    const b = BUILDS[k];
-    return b ? `<span class="stat-pill" style="background:${b.color}">${esc(b.label)}: ${n}</span>` : '';
-  }).join('');
+function resetBattle() {
+  PLAYERS.forEach(p => { if (p.squad === 'attack' || p.squad === 'def') p.squad = null; });
+  battleSlots = {
+    attack: { main: Array(20).fill(null), reserve: Array(5).fill(null) },
+    def:    { main: Array(20).fill(null), reserve: Array(5).fill(null) },
+  };
+  battleReserves.clear();
+}
+
+function bvRow(p, draggable) {
+  const b     = getBuild(p.build);
+  const bdg   = b ? `<span class="badge bv-badge" style="background:${b.color}">${esc(b.label)}</span>` : '';
+  const icons = (p.roles || []).map(r => ROLE_ICONS[r] || '').filter(Boolean).join('');
+  return `<div class="bv-row" data-player="${esc(p.name)}"${draggable ? ' draggable="true"' : ''}><span class="bv-name">${esc(p.name)}</span>${bdg}${icons ? `<span class="bv-roles">${icons}</span>` : ''}</div>`;
+}
+
+function bvCard(name) {
+  const p = PLAYERS.find(x => x.name === name);
+  const b = p ? getBuild(p.build) : null;
+  const icons = p ? (p.roles || []).map(r => ROLE_ICONS[r] || '').filter(Boolean).join('') : '';
+  const drag = battleEditMode ? ' draggable="true"' : '';
+  const badgeHtml = b
+    ? `<span class="bv-card-badge" style="background:${b.color}">${esc(b.label)}</span>`
+    : `<span class="bv-card-badge bv-card-badge--empty"></span>`;
+  return `<div class="bv-card" data-player="${esc(name)}"${drag}>${badgeHtml}<span class="bv-card-name">${esc(name)}</span><span class="bv-card-icons">${icons}</span></div>`;
+}
+
+function bvSlot(squad, zone, idx) {
+  const name = battleSlots[squad][zone][idx];
+  const dz = battleEditMode ? ' data-droppable="true"' : '';
+  return `<div class="bv-slot${name ? ' bv-slot--filled' : ' bv-slot--empty'}" data-slot-squad="${squad}" data-slot-zone="${zone}" data-slot-idx="${idx}"${dz}>${name ? bvCard(name) : ''}</div>`;
+}
+
+function bvColumn(squad) {
+  const isAtk = squad === 'attack';
+  const color = isAtk ? '#ef4444' : '#3b82f6';
+  const icon  = isAtk ? '⚔️' : '🛡️';
+  const label = isAtk ? 'Attack' : 'Def';
+  const mainFilled = battleSlots[squad].main.filter(Boolean).length;
+  const resFilled  = battleSlots[squad].reserve.filter(Boolean).length;
+  const mainSlots  = Array.from({length: 20}, (_, i) => bvSlot(squad, 'main', i)).join('');
+  const resSlots   = Array.from({length: 5},  (_, i) => bvSlot(squad, 'reserve', i)).join('');
+  const viewCls = battleEditMode ? '' : ' bv-col--view';
+  return `<div class="bv-col${viewCls}">
+  <div class="bv-col-hdr" style="border-color:${color};color:${color}">${icon} ${label}<span class="bv-count">${mainFilled}<span class="bv-max">/20</span></span></div>
+  <div class="bv-grid">${mainSlots}</div>
+  <div class="bv-res-lbl">Резерв<span class="bv-count">${resFilled}<span class="bv-max">/5</span></span></div>
+  <div class="bv-grid bv-grid-res">${resSlots}</div></div>`;
+}
+
+function viewBattle() {
+  if (!battleSlots) initBattleSlots();
+
+  const inSlots = new Set([
+    ...battleSlots.attack.main, ...battleSlots.attack.reserve,
+    ...battleSlots.def.main,    ...battleSlots.def.reserve,
+  ].filter(Boolean));
+  const free = sortPlayers(PLAYERS).filter(p => !inSlots.has(p.name));
+
+  const atkFilled = battleSlots.attack.main.filter(Boolean).length + battleSlots.attack.reserve.filter(Boolean).length;
+  const defFilled = battleSlots.def.main.filter(Boolean).length    + battleSlots.def.reserve.filter(Boolean).length;
 
   $statsBar.innerHTML = `<div class="stats-summary">
-  <strong>Готові: ${ready.length}</strong>
-  ${attack.length  ? `<span class="stat-pill" style="background:#ef4444">Attack: ${attack.length}</span>`  : ''}
-  ${def.length     ? `<span class="stat-pill" style="background:#3b82f6">Def: ${def.length}</span>`        : ''}
-  ${noSquad.length ? `<span class="stat-pill" style="background:#64748b">?: ${noSquad.length}</span>`      : ''}
-  ${buildPills}
+  <span class="stat-pill" style="background:#ef4444">⚔️ Attack: ${atkFilled}</span>
+  <span class="stat-pill" style="background:#3b82f6">🛡️ Def: ${defFilled}</span>
+  ${free.length ? `<span class="stat-pill" style="background:#64748b">🔄 Вільні: ${free.length}</span>` : ''}
 </div>`;
   $statsBar.classList.remove('hidden');
 
-  const sections = [];
-  if (attack.length)  sections.push(renderBattleSquad('attack', attack));
-  if (def.length)     sections.push(renderBattleSquad('def',    def));
-  if (noSquad.length) sections.push(renderBattleSquad(null,     noSquad));
+  const dz = battleEditMode ? ' data-droppable="true"' : '';
+  const freeRows = free.map(p => bvRow(p, battleEditMode)).join('');
+  const poolHtml = (free.length > 0 || battleEditMode)
+    ? `<div class="bv-pool bv-zone" data-squad="__free__" data-reserve="false"${dz}><div class="bv-pool-hdr">🔄 Незакріплені${free.length ? ` · ${free.length}` : ''}</div>${freeRows || '<span class="bv-empty-hint">Всі гравці розподілені</span>'}</div>`
+    : '';
 
-  return sections.join('\n');
+  const sideHtml = battleEditMode
+    ? `<aside class="bv-sidebar"><div class="bv-sidebar-hdr">Всі гравці</div><div class="bv-sidebar-list">${
+        sortPlayers(PLAYERS).map(p => {
+          const b    = getBuild(p.build);
+          const inA  = battleSlots.attack.main.includes(p.name) || battleSlots.attack.reserve.includes(p.name);
+          const inD  = battleSlots.def.main.includes(p.name)    || battleSlots.def.reserve.includes(p.name);
+          const si   = inA ? '⚔' : inD ? '🛡' : '·';
+          return `<div class="bv-sidebar-row" data-player="${esc(p.name)}" draggable="true"><span class="bv-dot" style="background:${b ? b.color : '#475569'}"></span><span class="bv-name">${esc(p.name)}</span><span class="bv-squad-lbl">${si}</span></div>`;
+        }).join('')
+      }</div></aside>`
+    : '';
+
+  const toolbarBtns = battleEditMode
+    ? `<button class="btn-bv-edit active" data-action="bv-toggle-edit">✓ Готово</button><button class="btn-bv-reset" data-action="bv-reset">� Очистити пачки</button>`
+    : `<button class="btn-bv-edit" data-action="bv-toggle-edit">✏️ Редагувати</button><button class="btn-bv-photo" data-action="bv-save-photo">📷 Зберегти фото</button>`;
+
+  return `<div class="bv-wrap${battleEditMode ? ' bv-edit' : ''}">
+  <div class="bv-main">
+    <div class="bv-toolbar">${toolbarBtns}</div>
+    <div class="bv-columns">
+      ${bvColumn('attack')}
+      ${bvColumn('def')}
+    </div>
+    ${poolHtml}
+  </div>
+  ${sideHtml}
+</div>`;
 }
 
 /* ─── Main render ───────────────────────────────────────────────────────── */
@@ -276,9 +340,12 @@ function render() {
   const filtered = filterPlayers(PLAYERS);
   const sorted   = sortPlayers(filtered);
 
+  const $pc = document.getElementById('player-count');
+  if ($pc) $pc.textContent = PLAYERS.length;
+
   switch (state.viewMode) {
     case 'grouped': $roster.innerHTML = viewGrouped(sorted); break;
-    case 'battle':  $roster.innerHTML = viewBattle(sorted);  break;
+    case 'battle':  $roster.innerHTML = viewBattle();        break;
     default:        $roster.innerHTML = viewList(sorted);
   }
 }
@@ -416,6 +483,152 @@ function initEvents() {
     const hidden = $legend.classList.toggle('hidden');
     $legendToggle.querySelector('.legend-arrow').textContent = hidden ? '▸' : '▾';
     $legendToggle.setAttribute('aria-expanded', String(!hidden));
+  });
+
+  // ─── Бойовий вигляд: редагування + DnD ─────────────────────────────────
+  $roster.addEventListener('click', e => {
+    if (e.target.closest('[data-action="bv-toggle-edit"]')) {
+      if (!battleEditMode) {
+        if (!battleSlots) initBattleSlots();
+        snapshotBattle();
+      }
+      battleEditMode = !battleEditMode;
+      render();
+    }
+    if (e.target.closest('[data-action="bv-reset"]')) {
+      resetBattle();
+      render();
+    }
+    if (e.target.closest('[data-action="bv-save-photo"]')) {
+      const el = document.querySelector('.bv-columns');
+      if (!el || typeof html2canvas === 'undefined') return;
+      const btn = e.target.closest('[data-action="bv-save-photo"]');
+      btn.disabled = true;
+      btn.textContent = '⏳ Зберігаю...';
+
+      // Build a clean clone without empty trailing slots / empty reserve
+      const clone = el.cloneNode(true);
+      clone.style.cssText = `position:fixed;left:-9999px;top:0;width:${el.offsetWidth}px`;
+      document.body.appendChild(clone);
+
+      // Strip trailing empty slots from main grids
+      clone.querySelectorAll('.bv-grid:not(.bv-grid-res)').forEach(grid => {
+        const slots = Array.from(grid.querySelectorAll('.bv-slot'));
+        let lastFilled = -1;
+        slots.forEach((s, i) => { if (s.classList.contains('bv-slot--filled')) lastFilled = i; });
+        slots.forEach((s, i) => { if (i > lastFilled) s.remove(); });
+      });
+
+      // Remove reserve section entirely if nothing is filled there
+      clone.querySelectorAll('.bv-col').forEach(col => {
+        const resGrid = col.querySelector('.bv-grid-res');
+        if (!resGrid) return;
+        const hasFilled = resGrid.querySelector('.bv-slot--filled');
+        if (!hasFilled) {
+          resGrid.remove();
+          const resLbl = col.querySelector('.bv-res-lbl');
+          if (resLbl) resLbl.remove();
+        }
+      });
+
+      html2canvas(clone, { scale: 2, useCORS: true, backgroundColor: '#1a1d27' })
+        .then(canvas => {
+          const link = document.createElement('a');
+          link.download = 'gvg-battle.png';
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        })
+        .finally(() => {
+          document.body.removeChild(clone);
+          render();
+        });
+    }
+  });
+
+  let _dragPlayer = null;
+  let _dragFromSlot = null;
+  $roster.addEventListener('dragstart', e => {
+    const card = e.target.closest('[data-player][draggable="true"]');
+    if (!card) return;
+    _dragPlayer = card.dataset.player;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', _dragPlayer);
+    card.classList.add('bv-dragging');
+    // determine source slot
+    const slot = card.closest('[data-slot-squad]');
+    _dragFromSlot = slot
+      ? { squad: slot.dataset.slotSquad, zone: slot.dataset.slotZone, idx: parseInt(slot.dataset.slotIdx) }
+      : null;
+  });
+  $roster.addEventListener('dragend', () => {
+    document.querySelectorAll('.bv-dragging').forEach(el => el.classList.remove('bv-dragging'));
+    _dragPlayer = null;
+    _dragFromSlot = null;
+  });
+  $roster.addEventListener('dragover', e => {
+    const zone = e.target.closest('[data-droppable="true"]');
+    if (!zone) return;
+    e.preventDefault();
+    document.querySelectorAll('.bv-drag-over').forEach(el => el.classList.remove('bv-drag-over'));
+    zone.classList.add('bv-drag-over');
+  });
+  $roster.addEventListener('dragleave', e => {
+    const zone = e.target.closest('[data-droppable="true"]');
+    if (!zone || zone.contains(e.relatedTarget)) return;
+    zone.classList.remove('bv-drag-over');
+  });
+  $roster.addEventListener('drop', e => {
+    e.preventDefault();
+    const zone = e.target.closest('[data-droppable="true"]');
+    if (!zone) return;
+    zone.classList.remove('bv-drag-over');
+    const name = e.dataTransfer.getData('text/plain') || _dragPlayer;
+    if (!name) return;
+
+    if (zone.hasAttribute('data-slot-squad')) {
+      // слот-ціль
+      const toSquad = zone.dataset.slotSquad;
+      const toZone  = zone.dataset.slotZone;
+      const toIdx   = parseInt(zone.dataset.slotIdx);
+      const toName  = battleSlots[toSquad][toZone][toIdx];
+
+      if (_dragFromSlot) {
+        // переміщення з одного слоту в інший (з можливим swap)
+        const { squad: fSq, zone: fZone, idx: fIdx } = _dragFromSlot;
+        battleSlots[fSq][fZone][fIdx]         = toName || null;
+        battleSlots[toSquad][toZone][toIdx]   = name;
+        const p = PLAYERS.find(x => x.name === name);
+        if (p) p.squad = toSquad;
+        if (toZone === 'reserve') battleReserves.add(name); else battleReserves.delete(name);
+        if (toName) {
+          const pTo = PLAYERS.find(x => x.name === toName);
+          if (pTo) pTo.squad = fSq;
+          if (fZone === 'reserve') battleReserves.add(toName); else battleReserves.delete(toName);
+        }
+      } else {
+        // з вільного пулу або sidebar → слот
+        removeFromSlots(name);
+        if (toName) {
+          const pTo = PLAYERS.find(x => x.name === toName);
+          if (pTo) { pTo.squad = null; battleReserves.delete(toName); }
+        }
+        battleSlots[toSquad][toZone][toIdx] = name;
+        const p = PLAYERS.find(x => x.name === name);
+        if (p) p.squad = toSquad;
+        if (toZone === 'reserve') battleReserves.add(name); else battleReserves.delete(name);
+      }
+    } else {
+      // підпало на вільний пул
+      if (_dragFromSlot) {
+        const { squad: fSq, zone: fZone, idx: fIdx } = _dragFromSlot;
+        battleSlots[fSq][fZone][fIdx] = null;
+      } else {
+        removeFromSlots(name);
+      }
+      const p = PLAYERS.find(x => x.name === name);
+      if (p) { p.squad = null; battleReserves.delete(name); }
+    }
+    render();
   });
 }
 
