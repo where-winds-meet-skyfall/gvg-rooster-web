@@ -14,6 +14,7 @@
     <button id="legend-toggle" class="btn-legend" aria-expanded="false" aria-controls="legend">
       Легенда <span class="legend-arrow">▸</span>
     </button>
+    <button id="auth-btn" class="btn-auth">🔐 Увійти</button>
   </header>
 
   <div id="legend" class="legend hidden"></div>
@@ -85,9 +86,36 @@
 
   <main id="roster" class="roster"></main>
 
+  <!-- Модальне вікно входу -->
+  <div id="login-modal" class="login-modal">
+    <div class="login-box">
+      <h2 class="login-title">Вхід в адмінку</h2>
+      <form id="login-form" autocomplete="on">
+        <div class="login-field">
+          <label class="login-label" for="login-username">Логін</label>
+          <input id="login-username" class="login-input" type="text"
+                 name="username" autocomplete="username"
+                 placeholder="Skyfall" required>
+        </div>
+        <div class="login-field">
+          <label class="login-label" for="login-password">Пароль</label>
+          <input id="login-password" class="login-input" type="password"
+                 name="password" autocomplete="current-password"
+                 placeholder="••••••••" required>
+        </div>
+        <div id="login-error" class="login-error"></div>
+        <button type="submit" class="btn-login-submit">Увійти</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
   <script src="html2canvas.min.js"></script>
   <script src="mapdata.js"></script>
   <script src="data.js"></script>
+  <script src="firebase.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

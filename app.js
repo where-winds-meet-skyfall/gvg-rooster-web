@@ -30,6 +30,14 @@ let battleEditMode = false;
 const battleReserves = new Set(); // імена гравців у резервному слоті
 let battleSlots = null;           // { attack: { main:[×20], reserve:[×5] }, def: same }
 let _battleSquadSnapshot = null;  // для кнопки «скинути»
+const battleSidebarFilter = { search: '', builds: new Set(), squads: new Set() };
+const svSidebarFilter     = { search: '', builds: new Set(), squads: new Set() };
+
+let battlePresets = {};
+let activeBattlePresetId = null;
+
+let strategyPresets = {};
+let activeStrategyPresetId = null;
 
 const BATTLE_STATE_KEY = 'gvg-battle-state';
 
@@ -81,35 +89,40 @@ function esc(str) {
     .replace(/"/g,  '&quot;');
 }
 
+// Firebase omits null array entries — fillNull відновлює їх при читанні,
+// а mapNull очищує undefined перед записом.
+function fillNull(src, len) {
+  const out = Array(len).fill(null);
+  if (Array.isArray(src)) src.forEach((v, i) => { if (i < len) out[i] = v ?? null; });
+  return out;
+}
+function mapNull(arr) { return arr.map(v => v ?? null); }
+
 function saveBattleState() {
   if (!battleSlots) return;
-  try {
-    const data = {
-      slots: {
-        attack: { main: [...battleSlots.attack.main], reserve: [...battleSlots.attack.reserve] },
-        def:    { main: [...battleSlots.def.main],    reserve: [...battleSlots.def.reserve] }
-      },
-      reserves: [...battleReserves]
-    };
-    localStorage.setItem(BATTLE_STATE_KEY, JSON.stringify(data));
-  } catch {}
+  const data = {
+    slots: {
+      attack: { main: mapNull(battleSlots.attack.main), reserve: mapNull(battleSlots.attack.reserve) },
+      def:    { main: mapNull(battleSlots.def.main),    reserve: mapNull(battleSlots.def.reserve) }
+    },
+    reserves: [...battleReserves]
+  };
+  // Зберігаємо в Firebase (тільки для авторизованих)
+  if (typeof fbSaveBattleState === 'function' && fbIsAdmin()) {
+    fbSaveBattleState(data);
+  }
+  // Кешуємо локально для швидкого першого рендеру
+  try { localStorage.setItem(BATTLE_STATE_KEY, JSON.stringify(data)); } catch {}
 }
 
-function loadBattleState() {
-  let saved = null;
-  try {
-    const raw = localStorage.getItem(BATTLE_STATE_KEY);
-    if (raw) saved = JSON.parse(raw);
-  } catch {}
+function applyBattleState(saved) {
   if (!saved) saved = INITIAL_BATTLE_STATE;
-
   battleSlots = {
-    attack: { main: [...saved.slots.attack.main], reserve: [...saved.slots.attack.reserve] },
-    def:    { main: [...saved.slots.def.main],    reserve: [...saved.slots.def.reserve] }
+    attack: { main: fillNull(saved.slots.attack.main, 20), reserve: fillNull(saved.slots.attack.reserve, 5) },
+    def:    { main: fillNull(saved.slots.def.main, 20),    reserve: fillNull(saved.slots.def.reserve, 5) }
   };
   battleReserves.clear();
   (saved.reserves || []).forEach(name => { if (name) battleReserves.add(name); });
-
   PLAYERS.forEach(p => { p.squad = null; });
   for (const sq of ['attack', 'def']) {
     for (const zone of ['main', 'reserve']) {
@@ -142,6 +155,45 @@ function buildIconHtml(key, isAlt = false) {
   const name = b.label.replace(/^\S+\s*/, '');
   const cls  = isAlt ? 'sv-build-icon sv-build-icon--alt' : 'sv-build-icon';
   return `<span class="${cls}" style="--bc:${b.color}" title="${esc(name)}">${icon}</span>`;
+}
+
+/* ─── Shared sidebar helpers ────────────────────────────────────────────── */
+function getCurrentSidebarFilter() {
+  return state.viewMode === 'strategy' ? svSidebarFilter : battleSidebarFilter;
+}
+
+function buildSidebarStickyHtml(title, filterState) {
+  const usedKeys = new Set(PLAYERS.map(p => p.build).filter(Boolean));
+  const filtersHtml = Object.entries(BUILDS)
+    .filter(([key]) => usedKeys.has(key))
+    .map(([key, b]) => {
+      const active = filterState.builds.has(key) ? ' bv-filter-active' : '';
+      return `<span class="sv-build-icon${active}" data-action="bv-build-filter" data-build-key="${esc(key)}" style="--bc:${b.color};cursor:pointer" title="${esc(b.label.replace(/^\S+\s*/, ''))}">${esc(b.label.split(' ')[0])}</span>`;
+    }).join('');
+  const squadBtns = [
+    { key: 'attack', label: '⚔', title: 'Атака',  color: '#ef4444' },
+    { key: 'def',    label: '🛡', title: 'Захист', color: '#3b82f6' },
+    { key: 'free',   label: '🔄', title: 'Вільні', color: '#64748b' },
+  ].map(({ key, label, title, color }) => {
+    const active = filterState.squads.has(key) ? ' bv-filter-active' : '';
+    return `<span class="sv-build-icon${active}" data-action="bv-squad-filter" data-squad-key="${key}" style="--bc:${color};cursor:pointer" title="${title}">${label}</span>`;
+  }).join('');
+  return `<div class="bv-sidebar-sticky">
+    <div class="bv-sidebar-hdr">${esc(title)}</div>
+    <div class="bv-sidebar-build-filters">${filtersHtml}</div>
+    <div class="bv-sidebar-squad-filters">${squadBtns}</div>
+    <div class="bv-sidebar-search-wrap">
+      <input class="bv-sidebar-search" type="text" placeholder="Пошук…" autocomplete="off" value="${esc(filterState.search)}">
+    </div>
+  </div>`;
+}
+
+function squadRowClass(p) {
+  return p.squad === 'attack' ? 'bv-row-attack' : p.squad === 'def' ? 'bv-row-def' : 'bv-row-free';
+}
+
+function squadSortedPlayers() {
+  return [...PLAYERS].sort((a, b) => a.name.localeCompare(b.name, 'uk'));
 }
 
 function squadBadge(squad) {
@@ -283,9 +335,51 @@ function viewGrouped(players) {
     : '<p class="empty">Немає гравців.</p>';
 }
 
+/* ─── Preset Bars ───────────────────────────────────────────────────────── */
+function presetBarBattle() {
+  const canEdit = typeof fbIsAdmin === 'function' && fbIsAdmin();
+  const sorted = Object.entries(battlePresets)
+    .sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
+  const liveOpt = `<option value="__live__"${activeBattlePresetId === null ? ' selected' : ''}>Поточний</option>`;
+  const opts = sorted.map(([id, p]) =>
+    `<option value="${esc(id)}"${activeBattlePresetId === id ? ' selected' : ''}>${esc(p.name)}</option>`
+  ).join('');
+  const hasSaved = activeBattlePresetId !== null;
+  const adminBtns = canEdit ? [
+    `<button class="btn-preset btn-preset--save" data-action="bv-preset-save">+ Зберегти</button>`,
+    hasSaved ? `<button class="btn-preset btn-preset--activate" data-action="bv-preset-activate">↑ Активувати</button>` : '',
+    hasSaved ? `<button class="btn-preset btn-preset--icon" data-action="bv-preset-rename" title="Перейменувати">✏</button>` : '',
+    hasSaved ? `<button class="btn-preset btn-preset--icon btn-preset--del" data-action="bv-preset-delete" title="Видалити">🗑</button>` : '',
+  ].join('') : '';
+  return `<div class="preset-bar"><span class="preset-label">Пресет</span><select class="preset-select" data-action="bv-preset-select">${liveOpt}${opts}</select>${adminBtns}</div>`;
+}
+
+function presetBarStrategy() {
+  const canEdit = typeof fbIsAdmin === 'function' && fbIsAdmin();
+  const sorted = Object.entries(strategyPresets)
+    .sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
+  const noneOpt = `<option value="__none__"${activeStrategyPresetId === null ? ' selected' : ''}>— Виберіть пресет —</option>`;
+  const opts = sorted.map(([id, p]) =>
+    `<option value="${esc(id)}"${activeStrategyPresetId === id ? ' selected' : ''}>${esc(p.name)}</option>`
+  ).join('');
+  const hasSaved = activeStrategyPresetId !== null;
+  const adminBtns = canEdit ? [
+    `<button class="btn-preset btn-preset--save" data-action="sv-preset-save">+ Зберегти</button>`,
+    hasSaved ? `<button class="btn-preset btn-preset--icon" data-action="sv-preset-rename" title="Перейменувати">✏</button>` : '',
+    hasSaved ? `<button class="btn-preset btn-preset--icon btn-preset--del" data-action="sv-preset-delete" title="Видалити">🗑</button>` : '',
+  ].join('') : '';
+  return `<div class="preset-bar sv-preset-bar"><span class="preset-label">Пресет</span><select class="preset-select" data-action="sv-preset-select">${noneOpt}${opts}</select>${adminBtns}</div>`;
+}
+
 /* ─── Battle View (redesigned) ─────────────────────────────────────────── */
 function initBattleSlots() {
-  loadBattleState();
+  // Швидкий синхронний init з localStorage-кешу; Firebase оновить асинхронно
+  let cached = null;
+  try {
+    const raw = localStorage.getItem(BATTLE_STATE_KEY);
+    if (raw) cached = JSON.parse(raw);
+  } catch {}
+  applyBattleState(cached);
 }
 
 function removeFromSlots(name) {
@@ -384,24 +478,40 @@ function viewBattle() {
     ? `<div class="bv-pool bv-zone" data-squad="__free__" data-reserve="false"${dz}><div class="bv-pool-hdr">🔄 Незакріплені${free.length ? ` · ${free.length}` : ''}</div>${freeRows || '<span class="bv-empty-hint">Всі гравці розподілені</span>'}</div>`
     : '';
 
-  const sideHtml = battleEditMode
-    ? `<aside class="bv-sidebar"><div class="bv-sidebar-hdr">Всі гравці</div><div class="bv-sidebar-list">${
-        sortPlayers(PLAYERS).map(p => {
-          const b    = getBuild(p.build);
-          const inA  = battleSlots.attack.main.includes(p.name) || battleSlots.attack.reserve.includes(p.name);
-          const inD  = battleSlots.def.main.includes(p.name)    || battleSlots.def.reserve.includes(p.name);
-          const si   = inA ? '⚔' : inD ? '🛡' : '·';
-          return `<div class="bv-sidebar-row" data-player="${esc(p.name)}" draggable="true"><span class="bv-dot" style="background:${b ? b.color : '#475569'}"></span><span class="bv-name">${esc(p.name)}</span><span class="bv-squad-lbl">${si}</span></div>`;
-        }).join('')
-      }</div></aside>`
-    : '';
+  const sideHtml = battleEditMode ? (() => {
+    const sf  = battleSidebarFilter;
+    const sq  = sf.search.toLowerCase();
+    const bf  = sf.builds;
+    const sqf = sf.squads;
+    const rowsHtml = squadSortedPlayers().map(p => {
+      const b        = getBuild(p.build);
+      const iconHtml = b
+        ? `<span class="sv-build-icon" style="--bc:${b.color}" title="${esc(b.label.replace(/^\S+\s*/, ''))}">${esc(b.label.split(' ')[0])}</span>`
+        : `<span class="sv-build-icon" style="--bc:#475569">?</span>`;
+      const inA      = battleSlots.attack.main.includes(p.name) || battleSlots.attack.reserve.includes(p.name);
+      const inD      = battleSlots.def.main.includes(p.name)    || battleSlots.def.reserve.includes(p.name);
+      const squadKey = inA ? 'attack' : inD ? 'def' : 'free';
+      const rowCls   = inA ? 'bv-row-attack' : inD ? 'bv-row-def' : 'bv-row-free';
+      const nameOk   = !sq || p.name.toLowerCase().includes(sq);
+      const buildOk  = bf.size === 0 || bf.has(p.build);
+      const squadOk  = sqf.size === 0 || sqf.has(squadKey);
+      const display  = (nameOk && buildOk && squadOk) ? '' : ' style="display:none"';
+      return `<div class="bv-sidebar-row ${rowCls}"${display} data-player="${esc(p.name)}" data-build="${esc(p.build || '')}" data-squad="${squadKey}" draggable="true">${iconHtml}<span class="bv-name">${esc(p.name)}</span></div>`;
+    }).join('');
+    return `<aside class="bv-sidebar">
+      ${buildSidebarStickyHtml('Всі гравці', sf)}
+      <div class="bv-sidebar-list">${rowsHtml}</div>
+    </aside>`;
+  })() : '';
 
+  const canEdit = typeof fbIsAdmin === 'function' && fbIsAdmin();
   const toolbarBtns = battleEditMode
-    ? `<button class="btn-bv-edit active" data-action="bv-toggle-edit">✓ Готово</button><button class="btn-bv-reset" data-action="bv-reset">� Очистити пачки</button>`
-    : `<button class="btn-bv-edit" data-action="bv-toggle-edit">✏️ Редагувати</button><button class="btn-bv-photo" data-action="bv-save-photo">📷 Зберегти фото</button>`;
+    ? `<button class="btn-bv-edit active" data-action="bv-toggle-edit">✓ Готово</button><button class="btn-bv-reset" data-action="bv-reset">🗑 Очистити пачки</button>`
+    : `${canEdit ? `<button class="btn-bv-edit" data-action="bv-toggle-edit">✏️ Редагувати</button>` : ''}<button class="btn-bv-photo" data-action="bv-save-photo">📷 Зберегти фото</button>`;
 
   return `<div class="bv-wrap${battleEditMode ? ' bv-edit' : ''}">
   <div class="bv-main">
+    ${!battleEditMode ? presetBarBattle() : ''}
     <div class="bv-toolbar">${toolbarBtns}</div>
     <div class="bv-columns">
       ${bvColumn('attack')}
@@ -534,7 +644,7 @@ function svDrawCanvas(preview) {
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (mapImg) {
-    ctx.drawImage(mapImg, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(mapImg, 100, 200, mapImg.naturalWidth - 200, mapImg.naturalHeight - 400, 0, 0, canvas.width, canvas.height);
   } else {
     ctx.fillStyle = '#0d1126';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -639,8 +749,8 @@ function initStrategyCanvas() {
   sv.ctx    = canvas.getContext('2d');
 
   const setupCanvas = () => {
-    canvas.width  = sv.mapImg ? sv.mapImg.naturalWidth  : 1200;
-    canvas.height = sv.mapImg ? sv.mapImg.naturalHeight : 750;
+    canvas.width  = sv.mapImg ? sv.mapImg.naturalWidth  - 200 : 1000;
+    canvas.height = sv.mapImg ? sv.mapImg.naturalHeight - 400 : 350;
     svDrawCanvas();
   };
 
@@ -709,21 +819,28 @@ function initStrategyCanvas() {
 }
 
 function viewStrategy() {
-  const playerItems = PLAYERS.map(p => {
-    const b = getBuild(p.build);
-    const color = b?.color ?? '#64748b';
-    const squadColor = p.squad ? (SQUADS[p.squad]?.color ?? '#64748b') : null;
-    const dotHtml = squadColor ? `<span class="sv-squad-dot" style="background:${squadColor}"></span>` : '';
-    const iconsHtml = `<span class="sv-build-icons">${buildIconHtml(p.build)}${buildIconHtml(p.altBuild, true)}</span>`;
-    return `<div class="sv-player-item" data-name="${esc(p.name)}" style="--pc:${color}">
-  ${dotHtml}<span class="sv-player-name">${esc(p.name)}</span>${iconsHtml}
-</div>`;
+  const sf  = svSidebarFilter;
+  const sq  = sf.search.toLowerCase();
+  const bf  = sf.builds;
+  const sqf = sf.squads;
+  const playerItems = squadSortedPlayers().map(p => {
+    const b          = getBuild(p.build);
+    const color      = b?.color ?? '#64748b';
+    const rowCls     = squadRowClass(p);
+    const iconsHtml  = `<span class="sv-build-icons">${buildIconHtml(p.build)}${buildIconHtml(p.altBuild, true)}</span>`;
+    const squadKey   = p.squad ?? 'free';
+    const nameOk     = !sq || p.name.toLowerCase().includes(sq);
+    const buildOk    = bf.size === 0 || bf.has(p.build);
+    const squadOk    = sqf.size === 0 || sqf.has(squadKey);
+    const displayStr = (nameOk && buildOk && squadOk) ? '' : ';display:none';
+    return `<div class="sv-player-item ${rowCls}" data-name="${esc(p.name)}" data-build="${esc(p.build || '')}" data-squad="${squadKey}" style="--pc:${color}${displayStr}"><span class="sv-player-name">${esc(p.name)}</span>${iconsHtml}</div>`;
   }).join('');
 
   const toolBtn = t => `<button class="sv-btn${sv.tool === t ? ' active' : ''}" data-sv-tool="${t}">`;
   const colorBtn = c => `<button class="sv-color-btn${sv.color === c ? ' active' : ''}" data-sv-color="${c}" style="--c:${c}">`;
 
   return `<div class="sv-wrap">
+  ${presetBarStrategy()}
   <div class="sv-toolbar">
     <div class="sv-tool-group">
       ${toolBtn('arrow')}↗ Стрілка</button>
@@ -746,8 +863,8 @@ function viewStrategy() {
       <div class="sv-hint" style="${sv.arrowStart ? '' : 'display:none'}">Клікніть, щоб поставити кінець стрілки • Esc — скасувати</div>
     </div>
     <div class="sv-sidebar">
-      <div class="sv-sidebar-title">Гравці</div>
-      ${playerItems}
+      ${buildSidebarStickyHtml('Гравці', svSidebarFilter)}
+      <div class="bv-sidebar-list">${playerItems}</div>
     </div>
   </div>
 </div>`;
@@ -938,6 +1055,10 @@ function initEvents() {
       if (!battleEditMode) {
         if (!battleSlots) initBattleSlots();
         snapshotBattle();
+      } else {
+        battleSidebarFilter.search = '';
+        battleSidebarFilter.builds.clear();
+        battleSidebarFilter.squads.clear();
       }
       battleEditMode = !battleEditMode;
       render();
@@ -989,6 +1110,47 @@ function initEvents() {
           document.body.removeChild(clone);
           render();
         });
+    }
+  });
+
+  function applySidebarFilter() {
+    const sf  = getCurrentSidebarFilter();
+    const q   = sf.search.toLowerCase();
+    const bf  = sf.builds;
+    const sqf = sf.squads;
+    document.querySelectorAll('.bv-sidebar-list > *').forEach(row => {
+      const name    = row.dataset.player || row.dataset.name || '';
+      const nameOk  = !q   || name.toLowerCase().includes(q);
+      const buildOk = bf.size  === 0 || bf.has(row.dataset.build  || '');
+      const squadOk = sqf.size === 0 || sqf.has(row.dataset.squad || 'free');
+      row.style.display = (nameOk && buildOk && squadOk) ? '' : 'none';
+    });
+  }
+
+  $roster.addEventListener('input', e => {
+    const input = e.target.closest('.bv-sidebar-search');
+    if (!input) return;
+    getCurrentSidebarFilter().search = input.value;
+    applySidebarFilter();
+  });
+
+  $roster.addEventListener('click', e => {
+    const fi = e.target.closest('[data-action="bv-build-filter"]');
+    if (fi) {
+      const sf  = getCurrentSidebarFilter();
+      const key = fi.dataset.buildKey;
+      if (sf.builds.has(key)) { sf.builds.delete(key); fi.classList.remove('bv-filter-active'); }
+      else                    { sf.builds.add(key);    fi.classList.add('bv-filter-active');    }
+      applySidebarFilter();
+      return;
+    }
+    const si = e.target.closest('[data-action="bv-squad-filter"]');
+    if (si) {
+      const sf  = getCurrentSidebarFilter();
+      const key = si.dataset.squadKey;
+      if (sf.squads.has(key)) { sf.squads.delete(key); si.classList.remove('bv-filter-active'); }
+      else                    { sf.squads.add(key);    si.classList.add('bv-filter-active');    }
+      applySidebarFilter();
     }
   });
 
@@ -1078,6 +1240,99 @@ function initEvents() {
     saveBattleState();
     render();
   });
+
+  // ─── Preset: зміна вибору через select ──────────────────────────────────
+  $roster.addEventListener('change', e => {
+    const bvSel = e.target.closest('[data-action="bv-preset-select"]');
+    if (bvSel) {
+      const id = bvSel.value;
+      activeBattlePresetId = id === '__live__' ? null : id;
+      if (activeBattlePresetId === null) {
+        let cached = null;
+        try { cached = JSON.parse(localStorage.getItem(BATTLE_STATE_KEY)); } catch {}
+        applyBattleState(cached);
+      } else {
+        applyBattleState(battlePresets[activeBattlePresetId]);
+      }
+      render();
+      return;
+    }
+    const svSel = e.target.closest('[data-action="sv-preset-select"]');
+    if (svSel) {
+      const id = svSel.value;
+      activeStrategyPresetId = id === '__none__' ? null : id;
+      sv.elements = activeStrategyPresetId
+        ? JSON.parse(JSON.stringify(strategyPresets[activeStrategyPresetId]?.elements || []))
+        : [];
+      render();
+    }
+  });
+
+  // ─── Preset: кнопки збереження / активації / перейменування / видалення ──
+  $roster.addEventListener('click', e => {
+    if (e.target.closest('[data-action="bv-preset-save"]')) {
+      const name = prompt('Назва пресету:');
+      if (!name?.trim()) return;
+      if (!battleSlots) return;
+      const data = {
+        slots: {
+          attack: { main: mapNull(battleSlots.attack.main), reserve: mapNull(battleSlots.attack.reserve) },
+          def:    { main: mapNull(battleSlots.def.main),    reserve: mapNull(battleSlots.def.reserve) }
+        },
+        reserves: [...battleReserves]
+      };
+      fbSaveBattlePreset(name.trim(), data).then(id => { activeBattlePresetId = id; render(); });
+      return;
+    }
+    if (e.target.closest('[data-action="bv-preset-activate"]') && activeBattlePresetId) {
+      // застосовує поточний пресет як живий стан
+      saveBattleState();
+      activeBattlePresetId = null;
+      render();
+      return;
+    }
+    if (e.target.closest('[data-action="bv-preset-rename"]') && activeBattlePresetId) {
+      const cur = battlePresets[activeBattlePresetId]?.name || '';
+      const name = prompt('Нова назва:', cur);
+      if (!name?.trim() || name.trim() === cur) return;
+      fbUpdateBattlePreset(activeBattlePresetId, { name: name.trim() });
+      return;
+    }
+    if (e.target.closest('[data-action="bv-preset-delete"]') && activeBattlePresetId) {
+      if (!confirm(`Видалити пресет "${battlePresets[activeBattlePresetId]?.name}"?`)) return;
+      fbDeleteBattlePreset(activeBattlePresetId);
+      activeBattlePresetId = null;
+      let cached = null;
+      try { cached = JSON.parse(localStorage.getItem(BATTLE_STATE_KEY)); } catch {}
+      applyBattleState(cached);
+      render();
+      return;
+    }
+    if (e.target.closest('[data-action="sv-preset-save"]')) {
+      const name = prompt('Назва пресету:');
+      if (!name?.trim()) return;
+      fbSaveStrategyPreset(name.trim(), JSON.parse(JSON.stringify(sv.elements))).then(id => {
+        activeStrategyPresetId = id;
+        render();
+      });
+      return;
+    }
+    if (e.target.closest('[data-action="sv-preset-rename"]') && activeStrategyPresetId) {
+      const cur = strategyPresets[activeStrategyPresetId]?.name || '';
+      const name = prompt('Нова назва:', cur);
+      if (!name?.trim() || name.trim() === cur) return;
+      fbUpdateStrategyPreset(activeStrategyPresetId, { name: name.trim() });
+      return;
+    }
+    if (e.target.closest('[data-action="sv-preset-delete"]') && activeStrategyPresetId) {
+      if (!confirm(`Видалити пресет "${strategyPresets[activeStrategyPresetId]?.name}"?`)) return;
+      fbDeleteStrategyPreset(activeStrategyPresetId);
+      activeStrategyPresetId = null;
+      sv.elements = [];
+      render();
+      return;
+    }
+  });
 }
 
 /* ─── Aurora background (random on load) ───────────────────────────────── */
@@ -1117,4 +1372,43 @@ document.addEventListener('DOMContentLoaded', () => {
   initGearPills();
   initEvents();
   render();
+
+  // Слухаємо Firebase — оновлюємо стан для всіх підключених користувачів
+  if (typeof fbListenBattleState === 'function') {
+    fbListenBattleState(fbState => {
+      if (!fbState) return;
+      if (battleEditMode) return; // не перебиваємо поточне редагування
+      // оновлюємо живий стан тільки якщо не переглядаємо пресет
+      if (activeBattlePresetId === null) {
+        applyBattleState(fbState);
+        try { localStorage.setItem(BATTLE_STATE_KEY, JSON.stringify(fbState)); } catch {}
+        if (state.viewMode === 'battle') render();
+      }
+    });
+  }
+
+  if (typeof fbListenBattlePresets === 'function') {
+    fbListenBattlePresets(presets => {
+      battlePresets = presets;
+      if (activeBattlePresetId && !battlePresets[activeBattlePresetId]) {
+        // активний пресет видалили
+        activeBattlePresetId = null;
+        let cached = null;
+        try { cached = JSON.parse(localStorage.getItem(BATTLE_STATE_KEY)); } catch {}
+        applyBattleState(cached);
+      }
+      if (state.viewMode === 'battle') render();
+    });
+  }
+
+  if (typeof fbListenStrategyPresets === 'function') {
+    fbListenStrategyPresets(presets => {
+      strategyPresets = presets;
+      if (activeStrategyPresetId && !strategyPresets[activeStrategyPresetId]) {
+        activeStrategyPresetId = null;
+        sv.elements = [];
+      }
+      if (state.viewMode === 'strategy') render();
+    });
+  }
 });
