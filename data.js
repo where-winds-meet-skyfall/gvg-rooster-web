@@ -23,14 +23,14 @@ const BUILDS = {
 
   // ── DD ────────────────────────────────────────────
   umbrella_dd: {
-    label:      "☂️ Umbrella DD",
+    label:      "☂️ Umbrella",
     color:      "#f97316",
     category:   "DD",
     techniques: ["Inkwell (Fan)", "Vernal (Umbrella)"],
     weapons:    ["Fan", "Umbrella"]
   },
   umbrella_dd_aoe: {
-    label:      "🌀 Umbrella DD AOE",
+    label:      "🌀 Umbrella AOE",
     color:      "#a855f7",
     category:   "DD",
     techniques: ["Unfettered (Whip)", "Everspring (Umbrella)"],
@@ -94,7 +94,7 @@ const BUILDS = {
  */
 const PLAYERS = [
   { name: "LELUSH",          build: "tank",            altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: "def",    roles: ["Officer", "Jungle"], note: "гібрид: Mo Blade + Inkwell Fan; чистий танк" },
-  { name: "QiShye",          build: "nameless",        altBuild: "heal",             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
+  { name: "QiShye",          build: "nameless",        altBuild: "heal",             gearLevel: "mid", ready: true,  squad: "def",    roles: ["Jungle"], note: "" },
   { name: "SunRise",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["Jungle"], note: "" },
   { name: "Nixmoonky",       build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "LuthiXia",        build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["Officer"], note: "" },
@@ -103,7 +103,6 @@ const PLAYERS = [
   { name: "AUrory",          build: "umbrella_dd",     altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "ArthurPencilgun", build: "duals",           altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "lHanLil",         build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
-  { name: "Nanami",          build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "чистий хіл" },
   { name: "Chifusama",       build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["Officer", "Jungle"], note: "" },
   { name: "EnEr",            build: "umbrella_dd_aoe", altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["Jungle"], note: "" },
   { name: "CantBeTouched",   build: "katana",          altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["Officer", "Jungle"], note: "" },
@@ -118,11 +117,11 @@ const PLAYERS = [
   { name: "Geerion",         build: "nameless",        altBuild: "umbrella_dd",    gearLevel: "high", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "Jianggi",         build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
   { name: "OldRock",         build: "tank",            altBuild: "umbrella_dd",    gearLevel: "mid", ready: true,  squad: "attack", roles: ["Officer"], note: "" },
-  { name: "Espeir",          build: "nameless",        altBuild: null,              gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
+  { name: "Espeir",          build: "nameless",        altBuild: null,              gearLevel: "mid", ready: true,  squad: "def",    roles: ["Jungle"], note: "" },
   { name: "Endurist",        build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: ["Jungle"], note: "" },
   { name: "Aiswill",         build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
   { name: "StanislavZal",    build: "duals",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "Гібрід: дуали + мо блейд(стяжка)" },
   { name: "arhangels",       build: "heal",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
-  { name: "BlindMary",       build: "strategic",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
+  { name: "BlindMary",       build: "strategic",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["Jungle"], note: "" },
   { name: "Nanaaaaami",      build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
 ];
