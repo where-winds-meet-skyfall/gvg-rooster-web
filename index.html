@@ -14,6 +14,7 @@
     <button id="legend-toggle" class="btn-legend" aria-expanded="false" aria-controls="legend">
       Легенда <span class="legend-arrow">▸</span>
     </button>
+    <button id="add-player-btn" class="btn-add-player" style="display:none">+ Гравець</button>
     <button id="auth-btn" class="btn-auth">🔐 Увійти</button>
   </header>
 
@@ -85,6 +86,70 @@
   <div id="stats-bar" class="stats-bar hidden"></div>
 
   <main id="roster" class="roster"></main>
+
+  <!-- Модальне вікно редагування гравця -->
+  <div id="player-modal" class="player-modal">
+    <div class="player-modal-box">
+      <div class="player-modal-header">
+        <h2 class="player-modal-title" id="player-modal-title">Гравець</h2>
+        <button type="button" id="player-modal-close" class="player-modal-close" aria-label="Закрити">✕</button>
+      </div>
+      <form id="player-form" autocomplete="off">
+        <div class="pm-row">
+          <label class="pm-label" for="pm-name">Ігрове ім'я</label>
+          <input id="pm-name" type="text" class="pm-input" required placeholder="PlayerName">
+        </div>
+        <div class="pm-grid2">
+          <div class="pm-row">
+            <label class="pm-label" for="pm-build">Основний білд</label>
+            <select id="pm-build" class="pm-select"></select>
+          </div>
+          <div class="pm-row">
+            <label class="pm-label" for="pm-altbuild">Альт-білд</label>
+            <select id="pm-altbuild" class="pm-select"></select>
+          </div>
+          <div class="pm-row">
+            <label class="pm-label" for="pm-gear">Спорядження</label>
+            <select id="pm-gear" class="pm-select">
+              <option value="low">Низький</option>
+              <option value="mid" selected>Середній</option>
+              <option value="high">Високий</option>
+            </select>
+          </div>
+          <div class="pm-row">
+            <label class="pm-label" for="pm-squad">Пачка</label>
+            <select id="pm-squad" class="pm-select">
+              <option value="">Нерозподілений</option>
+              <option value="attack">Attack</option>
+              <option value="def">Defence</option>
+            </select>
+          </div>
+        </div>
+        <div class="pm-row">
+          <label class="pm-label">Ролі</label>
+          <div class="pm-roles-group">
+            <label class="pm-check-label"><input type="checkbox" name="pm-role" value="Officer"> 👑 Officer</label>
+            <label class="pm-check-label"><input type="checkbox" name="pm-role" value="Jungle"> 🌿 Jungle</label>
+            <label class="pm-check-label"><input type="checkbox" name="pm-role" value="Ninja"> 🥷 Ninja</label>
+          </div>
+        </div>
+        <div class="pm-row pm-row--check">
+          <label class="pm-check-label">
+            <input type="checkbox" id="pm-ready" checked> Готовий до GvG 30×30
+          </label>
+        </div>
+        <div class="pm-row">
+          <label class="pm-label" for="pm-note">Тактична нотатка</label>
+          <input id="pm-note" type="text" class="pm-input" placeholder="фокус, фланг, особливості…">
+        </div>
+        <div id="pm-error" class="pm-error"></div>
+        <div class="pm-actions">
+          <button type="button" id="pm-delete" class="btn-pm-delete" style="display:none">🗑 Видалити</button>
+          <button type="submit" id="pm-submit" class="btn-pm-save">Зберегти</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- Модальне вікно входу -->
   <div id="login-modal" class="login-modal">

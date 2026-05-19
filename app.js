@@ -26,6 +26,82 @@ const state = {
   sort: { field: 'name', dir: 'asc' }
 };
 
+let _playersInFirebase = false;
+
+function playersToFirebaseMap(list) {
+  const map = {};
+  list.forEach(p => {
+    map[p.name] = {
+      build:     p.build,
+      altBuild:  p.altBuild ?? null,
+      gearLevel: p.gearLevel,
+      ready:     !!p.ready,
+      squad:     p.squad ?? null,
+      roles:     Array.isArray(p.roles) ? p.roles : [],
+      note:      p.note || '',
+    };
+  });
+  return map;
+}
+
+function applyFirebasePlayers(data) {
+  if (!data) { _playersInFirebase = false; return; }
+  _playersInFirebase = true;
+  PLAYERS.length = 0;
+  Object.entries(data).forEach(([name, p]) => {
+    PLAYERS.push({
+      name,
+      build:     p.build     || Object.keys(BUILDS)[0],
+      altBuild:  p.altBuild  ?? null,
+      gearLevel: p.gearLevel || 'mid',
+      ready:     p.ready     ?? true,
+      squad:     p.squad     ?? null,
+      roles:     Array.isArray(p.roles) ? p.roles : [],
+      note:      p.note      || '',
+    });
+  });
+}
+
+function syncSquadsFromSlots() {
+  if (!battleSlots) return;
+  PLAYERS.forEach(p => { p.squad = null; });
+  for (const sq of ['attack', 'def']) {
+    for (const zone of ['main', 'reserve']) {
+      battleSlots[sq][zone].forEach(name => {
+        if (!name) return;
+        const p = PLAYERS.find(x => x.name === name);
+        if (p) p.squad = sq;
+      });
+    }
+  }
+}
+
+async function savePlayerData(name, data, originalName) {
+  if (!fbIsAdmin()) return;
+  if (_playersInFirebase) {
+    if (originalName && originalName !== name) {
+      await fbDeletePlayer(originalName);
+    }
+    await fbSavePlayer(name, data);
+  } else {
+    const map = playersToFirebaseMap(PLAYERS);
+    if (originalName && originalName !== name) delete map[originalName];
+    map[name] = data;
+    await fbSaveAllPlayers(map);
+  }
+}
+
+async function deletePlayerData(name) {
+  if (!fbIsAdmin()) return;
+  if (_playersInFirebase) {
+    await fbDeletePlayer(name);
+  } else {
+    const map = playersToFirebaseMap(PLAYERS);
+    delete map[name];
+    await fbSaveAllPlayers(map);
+  }
+}
+
 let battleEditMode = false;
 const battleReserves = new Set(); // імена гравців у резервному слоті
 let battleSlots = null;           // { attack: { main:[×20], reserve:[×5] }, def: same }
@@ -272,6 +348,7 @@ function sortPlayers(players) {
 
 /* ─── Card ──────────────────────────────────────────────────────────────── */
 function playerCard(p) {
+  const isAdmin = typeof fbIsAdmin === 'function' && fbIsAdmin();
   const readyLabel = p.ready
     ? '<span class="ready-status ready">✓ Готовий</span>'
     : '<span class="ready-status not-ready">✗ Ні</span>';
@@ -282,10 +359,13 @@ function playerCard(p) {
     ? `<div class="player-roles">${p.roles.map(roleBadge).join('')}</div>`
     : '';
   const squadHtml = p.squad ? squadBadge(p.squad) : '';
+  const editBtn = isAdmin
+    ? `<button class="btn-card-edit" data-action="edit-player" data-player="${esc(p.name)}" title="Редагувати гравця">✏</button>`
+    : '';
   return `<div class="player-card ${p.ready ? 'is-ready' : ''}">
   <div class="card-header">
     <span class="player-name">${esc(p.name)}</span>
-    <div class="card-header-right">${squadHtml}${readyLabel}</div>
+    <div class="card-header-right">${editBtn}${squadHtml}${readyLabel}</div>
   </div>
   <div class="card-body">
     <div class="player-badges">${badge(p.build)}${p.altBuild ? badge(p.altBuild, true) : ''}</div>
@@ -968,6 +1048,118 @@ function initGearPills() {
   ).join('');
 }
 
+/* ─── Player modal ──────────────────────────────────────────────────────── */
+function showPlayerModal(player) {
+  const modal = document.getElementById('player-modal');
+  const form  = document.getElementById('player-form');
+  if (!modal || !form) return;
+
+  document.getElementById('player-modal-title').textContent =
+    player ? `Редагувати: ${player.name}` : 'Новий гравець';
+  form.dataset.originalName = player?.name ?? '';
+
+  document.getElementById('pm-name').value       = player?.name      ?? '';
+  document.getElementById('pm-build').value      = player?.build     ?? Object.keys(BUILDS)[0];
+  document.getElementById('pm-altbuild').value   = player?.altBuild  ?? '';
+  document.getElementById('pm-gear').value       = player?.gearLevel ?? 'mid';
+  document.getElementById('pm-ready').checked    = player?.ready     ?? true;
+  document.getElementById('pm-squad').value      = player?.squad     ?? '';
+  document.getElementById('pm-note').value       = player?.note      ?? '';
+
+  form.querySelectorAll('input[name="pm-role"]').forEach(cb => {
+    cb.checked = (player?.roles ?? []).includes(cb.value);
+  });
+
+  document.getElementById('pm-delete').style.display = player ? '' : 'none';
+  document.getElementById('pm-error').textContent    = '';
+  modal.classList.add('is-open');
+  document.getElementById('pm-name').focus();
+}
+
+function initPlayerModal() {
+  const modal = document.getElementById('player-modal');
+  if (!modal) return;
+
+  // Заповнити select-и білдів з BUILDS
+  const buildOpts = Object.entries(BUILDS)
+    .map(([k, b]) => `<option value="${esc(k)}">${esc(b.label)}</option>`)
+    .join('');
+  document.getElementById('pm-build').innerHTML    = buildOpts;
+  document.getElementById('pm-altbuild').innerHTML = `<option value="">— Немає —</option>${buildOpts}`;
+
+  document.getElementById('player-modal-close').addEventListener('click', () => {
+    modal.classList.remove('is-open');
+  });
+  modal.addEventListener('click', e => {
+    if (e.target === modal) modal.classList.remove('is-open');
+  });
+
+  document.getElementById('add-player-btn')?.addEventListener('click', () => {
+    showPlayerModal(null);
+  });
+
+  document.getElementById('pm-delete').addEventListener('click', async () => {
+    const name = document.getElementById('player-form').dataset.originalName;
+    if (!name) return;
+    if (!confirm(`Видалити гравця "${name}"?`)) return;
+    const btn = document.getElementById('pm-delete');
+    btn.disabled = true;
+    try {
+      await deletePlayerData(name);
+      modal.classList.remove('is-open');
+    } catch (err) {
+      document.getElementById('pm-error').textContent = 'Помилка: ' + (err?.message ?? err);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('player-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form      = e.target;
+    const submitBtn = document.getElementById('pm-submit');
+    const errorEl   = document.getElementById('pm-error');
+
+    const originalName = form.dataset.originalName;
+    const name         = document.getElementById('pm-name').value.trim();
+
+    if (!name) { errorEl.textContent = "Ім'я обов'язкове"; return; }
+    if (/[.$#[\]/]/.test(name)) {
+      errorEl.textContent = "Ім'я не може містити: . $ # [ ] /";
+      return;
+    }
+    if (name !== originalName && PLAYERS.some(p => p.name === name)) {
+      errorEl.textContent = 'Гравець з таким іменем вже існує';
+      return;
+    }
+
+    const roles = [...form.querySelectorAll('input[name="pm-role"]:checked')].map(cb => cb.value);
+    const data = {
+      build:     document.getElementById('pm-build').value,
+      altBuild:  document.getElementById('pm-altbuild').value || null,
+      gearLevel: document.getElementById('pm-gear').value,
+      ready:     document.getElementById('pm-ready').checked,
+      squad:     document.getElementById('pm-squad').value || null,
+      roles,
+      note:      document.getElementById('pm-note').value.trim(),
+    };
+
+    submitBtn.disabled    = true;
+    submitBtn.textContent = 'Збереження…';
+    errorEl.textContent   = '';
+
+    try {
+      await savePlayerData(name, data, originalName);
+      modal.classList.remove('is-open');
+    } catch (err) {
+      errorEl.textContent = 'Помилка: ' + (err?.message ?? err);
+    } finally {
+      submitBtn.disabled    = false;
+      submitBtn.textContent = 'Зберегти';
+    }
+  });
+}
+
 /* ─── Events ────────────────────────────────────────────────────────────── */
 function initEvents() {
   // Вкладки режиму
@@ -1031,8 +1223,11 @@ function initEvents() {
     render();
   });
 
-  // Escape — скасувати дію в режимі стратегії
+  // Escape — скасувати дію в режимі стратегії / закрити модальне вікно
   document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.getElementById('player-modal')?.classList.remove('is-open');
+    }
     if (e.key === 'Escape' && state.viewMode === 'strategy') {
       sv.arrowStart = null;
       sv.selectedPlayer = null;
@@ -1047,6 +1242,16 @@ function initEvents() {
     const hidden = $legend.classList.toggle('hidden');
     $legendToggle.querySelector('.legend-arrow').textContent = hidden ? '▸' : '▾';
     $legendToggle.setAttribute('aria-expanded', String(!hidden));
+  });
+
+  // ─── Редагування гравця з картки ────────────────────────────────────────
+  $roster.addEventListener('click', e => {
+    const editBtn = e.target.closest('[data-action="edit-player"]');
+    if (editBtn) {
+      const player = PLAYERS.find(p => p.name === editBtn.dataset.player);
+      if (player) showPlayerModal(player);
+      return;
+    }
   });
 
   // ─── Бойовий вигляд: редагування + DnD ─────────────────────────────────
@@ -1371,6 +1576,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initRolePills();
   initGearPills();
   initEvents();
+  initPlayerModal();
   render();
 
   // Слухаємо Firebase — оновлюємо стан для всіх підключених користувачів
@@ -1409,6 +1615,16 @@ document.addEventListener('DOMContentLoaded', () => {
         sv.elements = [];
       }
       if (state.viewMode === 'strategy') render();
+    });
+  }
+
+  if (typeof fbListenPlayers === 'function') {
+    fbListenPlayers(data => {
+      if (!data) return; // немає даних — лишаємо data.js
+      applyFirebasePlayers(data);
+      syncSquadsFromSlots();
+      initRolePills();
+      render();
     });
   }
 });

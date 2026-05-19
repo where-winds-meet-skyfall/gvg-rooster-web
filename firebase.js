@@ -36,16 +36,19 @@ function fbGetDisplayName() {
 
 function fbUpdateAuthUI() {
   const btn = document.getElementById('auth-btn');
+  const addPlayerBtn = document.getElementById('add-player-btn');
   if (!btn) return;
   if (_fbCurrentUser) {
     const name = fbGetDisplayName();
     btn.innerHTML = `${name} · <span class="auth-signout">Вийти</span>`;
     btn.onclick = fbSignOut;
     btn.classList.add('is-signed-in');
+    if (addPlayerBtn) addPlayerBtn.style.display = '';
   } else {
     btn.innerHTML = '🔐 Увійти';
     btn.onclick = fbOpenLoginModal;
     btn.classList.remove('is-signed-in');
+    if (addPlayerBtn) addPlayerBtn.style.display = 'none';
   }
 }
 
@@ -107,6 +110,26 @@ function fbDeleteStrategyPreset(id) {
 
 function fbListenStrategyPresets(cb) {
   fbDb.ref('strategyPresets').on('value', snap => cb(snap.val() || {}));
+}
+
+/* ─── Players ───────────────────────────────────────────────────────────── */
+function fbListenPlayers(cb) {
+  fbDb.ref('players').on('value', snap => cb(snap.val()));
+}
+
+function fbSavePlayer(name, data) {
+  if (!fbIsAdmin()) return Promise.reject('not admin');
+  return fbDb.ref(`players/${name}`).set(data);
+}
+
+function fbDeletePlayer(name) {
+  if (!fbIsAdmin()) return Promise.reject('not admin');
+  return fbDb.ref(`players/${name}`).remove();
+}
+
+function fbSaveAllPlayers(map) {
+  if (!fbIsAdmin()) return Promise.reject('not admin');
+  return fbDb.ref('players').set(map);
 }
 
 /* ─── Login modal ───────────────────────────────────────────────────────── */
