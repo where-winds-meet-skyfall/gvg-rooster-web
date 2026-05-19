@@ -349,6 +349,320 @@ function viewBattle() {
 </div>`;
 }
 
+/* ─── Strategy View ─────────────────────────────────────────────────────── */
+const sv = {
+  elements:       [],   // {type:'arrow',x1,y1,x2,y2,color} | {type:'player',x,y,name,color}
+  tool:           'arrow',
+  color:          '#ef4444',
+  arrowStart:     null,
+  selectedPlayer: null,
+  mapImg:         null,
+  canvas:         null,
+  ctx:            null,
+};
+
+function svGetPos(e) {
+  const rect  = sv.canvas.getBoundingClientRect();
+  const scaleX = sv.canvas.width  / rect.width;
+  const scaleY = sv.canvas.height / rect.height;
+  let cx, cy;
+  if (e.changedTouches && e.changedTouches.length) {
+    cx = e.changedTouches[0].clientX; cy = e.changedTouches[0].clientY;
+  } else if (e.touches && e.touches.length) {
+    cx = e.touches[0].clientX; cy = e.touches[0].clientY;
+  } else {
+    cx = e.clientX; cy = e.clientY;
+  }
+  return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
+}
+
+function svDrawArrow(ctx, x1, y1, x2, y2, color, alpha) {
+  alpha = alpha ?? 1;
+  const dx = x2 - x1, dy = y2 - y1;
+  if (Math.sqrt(dx * dx + dy * dy) < 6) return;
+  const angle   = Math.atan2(dy, dx);
+  const headLen = 18;
+  ctx.save();
+  ctx.globalAlpha  = alpha;
+  ctx.strokeStyle  = color;
+  ctx.fillStyle    = color;
+  ctx.lineWidth    = 4;
+  ctx.lineCap      = 'round';
+  ctx.shadowColor  = color;
+  ctx.shadowBlur   = 8;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2 - headLen * 0.65 * Math.cos(angle), y2 - headLen * 0.65 * Math.sin(angle));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x2, y2);
+  ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+  ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function svDrawPlayer(ctx, x, y, name, color) {
+  const short  = name.length > 10 ? name.slice(0, 9) + '…' : name;
+  const fSize  = 11;
+  const padX   = 7, padY = 4;
+  const radius = 4;
+  ctx.save();
+  ctx.font = `bold ${fSize}px system-ui, -apple-system, sans-serif`;
+  const tw = ctx.measureText(short).width;
+  const w  = tw + padX * 2;
+  const h  = fSize + padY * 2;
+  const lx = x - w / 2, ty = y - h / 2;
+  // shadow
+  ctx.shadowColor = color;
+  ctx.shadowBlur  = 7;
+  // fill
+  ctx.fillStyle   = color;
+  ctx.globalAlpha = 0.92;
+  ctx.beginPath();
+  ctx.roundRect(lx, ty, w, h, radius);
+  ctx.fill();
+  // border
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur  = 0;
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+  ctx.lineWidth   = 1.2;
+  ctx.stroke();
+  // label
+  ctx.fillStyle    = '#fff';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.shadowColor  = 'rgba(0,0,0,0.8)';
+  ctx.shadowBlur   = 3;
+  ctx.fillText(short, x, y);
+  ctx.restore();
+}
+
+function svDrawCanvas(preview) {
+  const { canvas, ctx, mapImg, elements, arrowStart, color } = sv;
+  if (!ctx) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (mapImg) {
+    ctx.drawImage(mapImg, 0, 0, canvas.width, canvas.height);
+  } else {
+    ctx.fillStyle = '#0d1126';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  elements.forEach(el => {
+    if (el.type === 'arrow')  svDrawArrow(ctx, el.x1, el.y1, el.x2, el.y2, el.color);
+    if (el.type === 'player') svDrawPlayer(ctx, el.x, el.y, el.name, el.color);
+  });
+  if (arrowStart) {
+    // dot at start
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(arrowStart.x, arrowStart.y, 6, 0, Math.PI * 2);
+    ctx.fillStyle   = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur  = 10;
+    ctx.fill();
+    ctx.restore();
+    if (preview) svDrawArrow(ctx, arrowStart.x, arrowStart.y, preview.x, preview.y, color, 0.55);
+  }
+}
+
+function svDistToSegment(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+function svHitTest(x, y) {
+  for (let i = sv.elements.length - 1; i >= 0; i--) {
+    const el = sv.elements[i];
+    if (el.type === 'player') {
+      if (Math.hypot(el.x - x, el.y - y) <= 20) return i;
+    } else if (el.type === 'arrow') {
+      if (svDistToSegment(x, y, el.x1, el.y1, el.x2, el.y2) <= 14) return i;
+    }
+  }
+  return -1;
+}
+
+function svUpdateSidebar() {
+  const sidebar = document.querySelector('.sv-sidebar');
+  if (!sidebar) return;
+  const placed = new Set(sv.elements.filter(el => el.type === 'player').map(el => el.name));
+  sidebar.querySelectorAll('.sv-player-item').forEach(item => {
+    item.classList.toggle('sv-player--placed',   placed.has(item.dataset.name));
+    item.classList.toggle('sv-player--selected', item.dataset.name === sv.selectedPlayer);
+  });
+  // update hint
+  const hint = document.querySelector('.sv-hint');
+  if (hint) hint.style.display = sv.arrowStart ? '' : 'none';
+}
+
+function svHandleClick(e) {
+  if (e.type === 'touchend') e.preventDefault();
+  const pos = svGetPos(e);
+
+  if (sv.tool === 'arrow') {
+    if (!sv.arrowStart) {
+      sv.arrowStart = pos;
+    } else {
+      sv.elements.push({ type: 'arrow', x1: sv.arrowStart.x, y1: sv.arrowStart.y, x2: pos.x, y2: pos.y, color: sv.color });
+      sv.arrowStart = null;
+      svDrawCanvas();
+    }
+    svUpdateSidebar();
+  } else if (sv.tool === 'player') {
+    if (sv.selectedPlayer) {
+      sv.elements = sv.elements.filter(el => !(el.type === 'player' && el.name === sv.selectedPlayer));
+      const _p = PLAYERS.find(x => x.name === sv.selectedPlayer);
+      const _c = _p?.squad === 'attack' ? '#ef4444' : _p?.squad === 'def' ? '#3b82f6' : sv.color;
+      sv.elements.push({ type: 'player', x: pos.x, y: pos.y, name: sv.selectedPlayer, color: _c });
+      sv.selectedPlayer = null;
+      svDrawCanvas();
+      svUpdateSidebar();
+    }
+  } else if (sv.tool === 'erase') {
+    const idx = svHitTest(pos.x, pos.y);
+    if (idx !== -1) { sv.elements.splice(idx, 1); svDrawCanvas(); svUpdateSidebar(); }
+  }
+}
+
+function svHandleMove(e) {
+  if (sv.tool === 'arrow' && sv.arrowStart) {
+    if (e.cancelable) e.preventDefault();
+    svDrawCanvas(svGetPos(e));
+  }
+}
+
+function svLoadMap(onReady) {
+  const img = new Image();
+  img.onload = () => { sv.mapImg = img; onReady(); };
+  img.src = MAP_DATA_URL;
+}
+
+function initStrategyCanvas() {
+  const canvas = document.getElementById('sv-canvas');
+  if (!canvas) return;
+  sv.canvas = canvas;
+  sv.ctx    = canvas.getContext('2d');
+
+  const setupCanvas = () => {
+    canvas.width  = sv.mapImg ? sv.mapImg.naturalWidth  : 1200;
+    canvas.height = sv.mapImg ? sv.mapImg.naturalHeight : 750;
+    svDrawCanvas();
+  };
+
+  if (!sv.mapImg) {
+    svLoadMap(setupCanvas);
+  } else {
+    setupCanvas();
+  }
+
+  canvas.addEventListener('click',     svHandleClick);
+  canvas.addEventListener('touchend',  svHandleClick, { passive: false });
+  canvas.addEventListener('mousemove', svHandleMove);
+  canvas.addEventListener('touchmove', svHandleMove, { passive: false });
+
+  // Sidebar player selection
+  document.querySelector('.sv-sidebar')?.addEventListener('click', e => {
+    const item = e.target.closest('.sv-player-item');
+    if (!item) return;
+    const name = item.dataset.name;
+    if (sv.tool !== 'player') {
+      sv.tool = 'player';
+      document.querySelectorAll('[data-sv-tool]').forEach(b => b.classList.toggle('active', b.dataset.svTool === 'player'));
+    }
+    sv.selectedPlayer = sv.selectedPlayer === name ? null : name;
+    svUpdateSidebar();
+  });
+
+  // Toolbar
+  document.querySelector('.sv-toolbar')?.addEventListener('click', e => {
+    const toolBtn = e.target.closest('[data-sv-tool]');
+    if (toolBtn) {
+      sv.tool = toolBtn.dataset.svTool;
+      sv.arrowStart = null;
+      sv.selectedPlayer = null;
+      document.querySelectorAll('[data-sv-tool]').forEach(b => b.classList.toggle('active', b === toolBtn));
+      svUpdateSidebar();
+      svDrawCanvas();
+    }
+    const colorBtn = e.target.closest('[data-sv-color]');
+    if (colorBtn) {
+      sv.color = colorBtn.dataset.svColor;
+      document.querySelectorAll('[data-sv-color]').forEach(b => b.classList.toggle('active', b === colorBtn));
+    }
+    const actionBtn = e.target.closest('[data-sv-action]');
+    if (actionBtn) {
+      const act = actionBtn.dataset.svAction;
+      if (act === 'undo') {
+        sv.elements.pop(); sv.arrowStart = null; svDrawCanvas(); svUpdateSidebar();
+      } else if (act === 'clear') {
+        sv.elements = []; sv.arrowStart = null; svDrawCanvas(); svUpdateSidebar();
+      } else if (act === 'save') {
+        svDrawCanvas();
+        try {
+          const link = document.createElement('a');
+          link.download = 'strategy.png';
+          link.href = sv.canvas.toDataURL('image/png');
+          link.click();
+        } catch {
+          alert('Не вдалося зберегти: натисніть "📂 Карта" і виберіть файл map.jpeg щоб активувати збереження.');
+        }
+      }
+    }
+  });
+
+  svUpdateSidebar();
+}
+
+function viewStrategy() {
+  const playerItems = PLAYERS.map(p => {
+    const b = getBuild(p.build);
+    const color = b?.color ?? '#64748b';
+    const squadColor = p.squad ? (SQUADS[p.squad]?.color ?? '#64748b') : null;
+    const dotHtml = squadColor ? `<span class="sv-squad-dot" style="background:${squadColor}"></span>` : '';
+    return `<div class="sv-player-item" data-name="${esc(p.name)}" style="--pc:${color}">
+  ${dotHtml}<span class="sv-player-name">${esc(p.name)}</span>
+  <span class="sv-player-build">${esc(b?.label?.replace(/^[^\w\s]+ ?/, '') ?? '')}</span>
+</div>`;
+  }).join('');
+
+  const toolBtn = t => `<button class="sv-btn${sv.tool === t ? ' active' : ''}" data-sv-tool="${t}">`;
+  const colorBtn = c => `<button class="sv-color-btn${sv.color === c ? ' active' : ''}" data-sv-color="${c}" style="--c:${c}">`;
+
+  return `<div class="sv-wrap">
+  <div class="sv-toolbar">
+    <div class="sv-tool-group">
+      ${toolBtn('arrow')}↗ Стрілка</button>
+      ${toolBtn('player')}📍 Гравець</button>
+      ${toolBtn('erase')}✕ Ластик</button>
+    </div>
+    <div class="sv-color-group">
+      ${colorBtn('#ef4444')}⚔ Атака</button>
+      ${colorBtn('#3b82f6')}🛡 Деф</button>
+    </div>
+    <div class="sv-action-group">
+      <button class="sv-btn" data-sv-action="undo">↩ Undo</button>
+      <button class="sv-btn" data-sv-action="clear">⊘ Очистити</button>
+      <button class="sv-btn sv-btn--save" data-sv-action="save">⤓ Зберегти</button>
+    </div>
+  </div>
+  <div class="sv-body">
+    <div class="sv-canvas-wrap">
+      <canvas id="sv-canvas"></canvas>
+      <div class="sv-hint" style="${sv.arrowStart ? '' : 'display:none'}">Клікніть, щоб поставити кінець стрілки • Esc — скасувати</div>
+    </div>
+    <div class="sv-sidebar">
+      <div class="sv-sidebar-title">Гравці</div>
+      ${playerItems}
+    </div>
+  </div>
+</div>`;
+}
+
 /* ─── Main render ───────────────────────────────────────────────────────── */
 function render() {
   $statsBar.classList.add('hidden');
@@ -358,10 +672,14 @@ function render() {
   const $pc = document.getElementById('player-count');
   if ($pc) $pc.textContent = PLAYERS.length;
 
+  const isStrategy = state.viewMode === 'strategy';
+  document.body.classList.toggle('view-strategy', isStrategy);
+
   switch (state.viewMode) {
-    case 'grouped': $roster.innerHTML = viewGrouped(sorted); break;
-    case 'battle':  $roster.innerHTML = viewBattle();        break;
-    default:        $roster.innerHTML = viewList(sorted);
+    case 'grouped':  $roster.innerHTML = viewGrouped(sorted); break;
+    case 'battle':   $roster.innerHTML = viewBattle();        break;
+    case 'strategy': $roster.innerHTML = viewStrategy(); initStrategyCanvas(); break;
+    default:         $roster.innerHTML = viewList(sorted);
   }
 }
 
@@ -504,6 +822,16 @@ function initEvents() {
     $readyOnly.checked = false;
     document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
     render();
+  });
+
+  // Escape — скасувати дію в режимі стратегії
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && state.viewMode === 'strategy') {
+      sv.arrowStart = null;
+      sv.selectedPlayer = null;
+      svDrawCanvas();
+      svUpdateSidebar();
+    }
   });
 
   // Легенда
