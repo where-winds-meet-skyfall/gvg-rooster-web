@@ -124,4 +124,5 @@ const PLAYERS = [
   { name: "arhangels",       build: "heal",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "attack", roles: [], note: "" },
   { name: "BlindMary",       build: "strategic",              altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: ["Jungle"], note: "" },
   { name: "Nanaaaaami",      build: "heal",            altBuild: null,             gearLevel: "mid", ready: true,  squad: "def",    roles: [], note: "" },
+  { name: "DzirT",           build: "nameless",        altBuild: null,             gearLevel: "mid", ready: true,  squad: null,     roles: [], note: "" },
 ];
