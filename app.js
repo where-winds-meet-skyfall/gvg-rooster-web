@@ -31,6 +31,33 @@ const battleReserves = new Set(); // імена гравців у резервн
 let battleSlots = null;           // { attack: { main:[×20], reserve:[×5] }, def: same }
 let _battleSquadSnapshot = null;  // для кнопки «скинути»
 
+const BATTLE_STATE_KEY = 'gvg-battle-state';
+
+// Початковий стан пачок (відповідає скрину 19.05.2026)
+const INITIAL_BATTLE_STATE = {
+  slots: {
+    attack: {
+      main: [
+        'arhangels', 'OldRock', 'DzirT', 'datsann', 'Endurist',
+        'Jianggi', 'LuoJue-Lin', 'Kelevra', 'SunRise', 'Geerion',
+        'LuthiXia', 'StanislavZal', 'BayarD', 'EnEr', 'CantBeTouched',
+        'Nixmoonky', null, null, null, null
+      ],
+      reserve: ['Сreckadrenalin ', null, null, null, null]
+    },
+    def: {
+      main: [
+        'Nanaaaaami', 'MasterFoobar', 'MariSkywalker', 'lHanLil', 'CyMþak',
+        'LuminarA', 'LELUSH', 'Chifusama', 'Espeir', 'QiShye',
+        'Aiswill', 'AUrory', 'PonIka', 'ArthurPencilgun', null,
+        null, null, null, null, null
+      ],
+      reserve: ['Kirito_AL', 'BlindMary', null, null, null]
+    }
+  },
+  reserves: ['Сreckadrenalin ', 'Kirito_AL', 'BlindMary']
+};
+
 /* ─── DOM refs ──────────────────────────────────────────────────────────── */
 const $roster       = document.getElementById('roster');
 const $legend       = document.getElementById('legend');
@@ -52,6 +79,47 @@ function esc(str) {
     .replace(/</g,  '&lt;')
     .replace(/>/g,  '&gt;')
     .replace(/"/g,  '&quot;');
+}
+
+function saveBattleState() {
+  if (!battleSlots) return;
+  try {
+    const data = {
+      slots: {
+        attack: { main: [...battleSlots.attack.main], reserve: [...battleSlots.attack.reserve] },
+        def:    { main: [...battleSlots.def.main],    reserve: [...battleSlots.def.reserve] }
+      },
+      reserves: [...battleReserves]
+    };
+    localStorage.setItem(BATTLE_STATE_KEY, JSON.stringify(data));
+  } catch {}
+}
+
+function loadBattleState() {
+  let saved = null;
+  try {
+    const raw = localStorage.getItem(BATTLE_STATE_KEY);
+    if (raw) saved = JSON.parse(raw);
+  } catch {}
+  if (!saved) saved = INITIAL_BATTLE_STATE;
+
+  battleSlots = {
+    attack: { main: [...saved.slots.attack.main], reserve: [...saved.slots.attack.reserve] },
+    def:    { main: [...saved.slots.def.main],    reserve: [...saved.slots.def.reserve] }
+  };
+  battleReserves.clear();
+  (saved.reserves || []).forEach(name => { if (name) battleReserves.add(name); });
+
+  PLAYERS.forEach(p => { p.squad = null; });
+  for (const sq of ['attack', 'def']) {
+    for (const zone of ['main', 'reserve']) {
+      battleSlots[sq][zone].forEach(name => {
+        if (!name) return;
+        const p = PLAYERS.find(x => x.name === name);
+        if (p) p.squad = sq;
+      });
+    }
+  }
 }
 
 function getBuild(key) {
@@ -217,21 +285,7 @@ function viewGrouped(players) {
 
 /* ─── Battle View (redesigned) ─────────────────────────────────────────── */
 function initBattleSlots() {
-  const sorted = sortPlayers(PLAYERS);
-  battleSlots = {
-    attack: { main: Array(20).fill(null), reserve: Array(5).fill(null) },
-    def:    { main: Array(20).fill(null), reserve: Array(5).fill(null) },
-  };
-  let ai = 0, ari = 0, di = 0, dri = 0;
-  sorted.forEach(p => {
-    if (p.squad === 'attack') {
-      if (battleReserves.has(p.name)) { if (ari < 5)  battleSlots.attack.reserve[ari++] = p.name; }
-      else                            { if (ai  < 20) battleSlots.attack.main[ai++]     = p.name; }
-    } else if (p.squad === 'def') {
-      if (battleReserves.has(p.name)) { if (dri < 5)  battleSlots.def.reserve[dri++]   = p.name; }
-      else                            { if (di  < 20) battleSlots.def.main[di++]        = p.name; }
-    }
-  });
+  loadBattleState();
 }
 
 function removeFromSlots(name) {
@@ -261,6 +315,7 @@ function resetBattle() {
     def:    { main: Array(20).fill(null), reserve: Array(5).fill(null) },
   };
   battleReserves.clear();
+  saveBattleState();
 }
 
 function bvRow(p, draggable) {
@@ -1020,6 +1075,7 @@ function initEvents() {
       const p = PLAYERS.find(x => x.name === name);
       if (p) { p.squad = null; battleReserves.delete(name); }
     }
+    saveBattleState();
     render();
   });
 }
