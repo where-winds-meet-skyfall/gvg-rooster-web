@@ -67,6 +67,15 @@ function badge(key, alt = false) {
   return `<span class="badge" style="background:${b.color}">${esc(b.label)}</span>`;
 }
 
+function buildIconHtml(key, isAlt = false) {
+  const b = getBuild(key);
+  if (!b) return '';
+  const icon = b.label.split(' ')[0];
+  const name = b.label.replace(/^\S+\s*/, '');
+  const cls  = isAlt ? 'sv-build-icon sv-build-icon--alt' : 'sv-build-icon';
+  return `<span class="${cls}" style="--bc:${b.color}" title="${esc(name)}">${icon}</span>`;
+}
+
 function squadBadge(squad) {
   const s = SQUADS[squad];
   if (!s) return '';
@@ -403,39 +412,65 @@ function svDrawArrow(ctx, x1, y1, x2, y2, color, alpha) {
   ctx.restore();
 }
 
-function svDrawPlayer(ctx, x, y, name, color) {
-  const short  = name.length > 10 ? name.slice(0, 9) + '…' : name;
-  const fSize  = 11;
-  const padX   = 7, padY = 4;
-  const radius = 4;
+function svDrawPlayer(ctx, x, y, name, color, build) {
+  const b         = getBuild(build);
+  const emoji     = b ? b.label.split(' ')[0] : '';
+  const short     = name.length > 10 ? name.slice(0, 9) + '…' : name;
+  const fSize     = 11;
+  const padX      = 7, padY = 4;
+  const radius    = 4;
+  const emojiGap  = 3;
   ctx.save();
-  ctx.font = `bold ${fSize}px system-ui, -apple-system, sans-serif`;
-  const tw = ctx.measureText(short).width;
-  const w  = tw + padX * 2;
-  const h  = fSize + padY * 2;
-  const lx = x - w / 2, ty = y - h / 2;
-  // shadow
+
+  // Measure emoji width
+  let emojiW = 0;
+  if (emoji) {
+    ctx.font = `${fSize + 1}px system-ui, -apple-system, sans-serif`;
+    emojiW = ctx.measureText(emoji).width + emojiGap;
+  }
+
+  ctx.font     = `bold ${fSize}px system-ui, -apple-system, sans-serif`;
+  const tw     = ctx.measureText(short).width;
+  const w      = tw + emojiW + padX * 2;
+  const h      = fSize + padY * 2;
+  const lx     = x - w / 2, ty = y - h / 2;
+
+  // shadow + fill
   ctx.shadowColor = color;
   ctx.shadowBlur  = 7;
-  // fill
   ctx.fillStyle   = color;
   ctx.globalAlpha = 0.92;
   ctx.beginPath();
   ctx.roundRect(lx, ty, w, h, radius);
   ctx.fill();
+
   // border
   ctx.globalAlpha = 1;
   ctx.shadowBlur  = 0;
   ctx.strokeStyle = 'rgba(255,255,255,0.75)';
   ctx.lineWidth   = 1.2;
   ctx.stroke();
-  // label
+
+  // emoji icon
+  if (emoji) {
+    ctx.font         = `${fSize + 1}px system-ui, -apple-system, sans-serif`;
+    ctx.fillStyle    = '#fff';
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor  = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur   = 2;
+    ctx.fillText(emoji, lx + padX, y);
+  }
+
+  // name
+  ctx.font         = `bold ${fSize}px system-ui, -apple-system, sans-serif`;
   ctx.fillStyle    = '#fff';
-  ctx.textAlign    = 'center';
+  ctx.textAlign    = 'left';
   ctx.textBaseline = 'middle';
   ctx.shadowColor  = 'rgba(0,0,0,0.8)';
   ctx.shadowBlur   = 3;
-  ctx.fillText(short, x, y);
+  ctx.fillText(short, lx + padX + emojiW, y);
+
   ctx.restore();
 }
 
@@ -451,7 +486,7 @@ function svDrawCanvas(preview) {
   }
   elements.forEach(el => {
     if (el.type === 'arrow')  svDrawArrow(ctx, el.x1, el.y1, el.x2, el.y2, el.color);
-    if (el.type === 'player') svDrawPlayer(ctx, el.x, el.y, el.name, el.color);
+    if (el.type === 'player') svDrawPlayer(ctx, el.x, el.y, el.name, el.color, el.build);
   });
   if (arrowStart) {
     // dot at start
@@ -517,8 +552,8 @@ function svHandleClick(e) {
     if (sv.selectedPlayer) {
       sv.elements = sv.elements.filter(el => !(el.type === 'player' && el.name === sv.selectedPlayer));
       const _p = PLAYERS.find(x => x.name === sv.selectedPlayer);
-      const _c = _p?.squad === 'attack' ? '#ef4444' : _p?.squad === 'def' ? '#3b82f6' : sv.color;
-      sv.elements.push({ type: 'player', x: pos.x, y: pos.y, name: sv.selectedPlayer, color: _c });
+      const _c = _p?.squad === 'attack' ? '#ef4444' : _p?.squad === 'def' ? '#3b82f6' : '#64748b';
+      sv.elements.push({ type: 'player', x: pos.x, y: pos.y, name: sv.selectedPlayer, color: _c, build: _p?.build });
       sv.selectedPlayer = null;
       svDrawCanvas();
       svUpdateSidebar();
@@ -624,9 +659,9 @@ function viewStrategy() {
     const color = b?.color ?? '#64748b';
     const squadColor = p.squad ? (SQUADS[p.squad]?.color ?? '#64748b') : null;
     const dotHtml = squadColor ? `<span class="sv-squad-dot" style="background:${squadColor}"></span>` : '';
+    const iconsHtml = `<span class="sv-build-icons">${buildIconHtml(p.build)}${buildIconHtml(p.altBuild, true)}</span>`;
     return `<div class="sv-player-item" data-name="${esc(p.name)}" style="--pc:${color}">
-  ${dotHtml}<span class="sv-player-name">${esc(p.name)}</span>
-  <span class="sv-player-build">${esc(b?.label?.replace(/^[^\w\s]+ ?/, '') ?? '')}</span>
+  ${dotHtml}<span class="sv-player-name">${esc(p.name)}</span>${iconsHtml}
 </div>`;
   }).join('');
 
