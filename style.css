@@ -904,63 +904,144 @@ details[open] > .group-header::before { content: "▾"; }
   border-radius: 8px;
 }
 
+/* картка бойової пачки: header з білдом + рамка кольору білда,
+   ім'я крупно по центру (трохи вище), 4 косі вертикальні смуги
+   ролей+гіру на правій чверті */
+/* картка бойової пачки: фон = колір білда (рамка), всередині темна
+   панель з плавними кутами, заголовок зверху, ім'я по центру,
+   праві 25% — вертикальні смуги ролей+гіра */
 .bv-card {
+  position: relative;
   width: 100%;
   height: 100%;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 8px;
-  padding: 4px 5px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
+  background: var(--bc, rgba(80, 86, 110, 1));
+  border-radius: 14px;
   box-sizing: border-box;
-  backdrop-filter: blur(4px);
-  transition: border-color 0.12s, box-shadow 0.12s;
+  overflow: hidden;
   user-select: none;
+  transition: transform 0.14s ease, box-shadow 0.18s ease, filter 0.14s ease;
+  box-shadow:
+    0 3px 10px -3px rgba(0,0,0,0.55),
+    inset 0 0 0 1px rgba(255,255,255,0.10),
+    inset 0 -1px 0 rgba(0,0,0,0.30);
 }
 .bv-card[draggable="true"] { cursor: grab; }
 .bv-card[draggable="true"]:hover {
-  border-color: rgba(0,217,255,0.40);
-  box-shadow: 0 0 10px rgba(0,128,255,0.15);
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow:
+    0 6px 18px -4px rgba(0,0,0,0.65),
+    inset 0 0 0 1px rgba(255,255,255,0.15),
+    0 0 16px -2px var(--bc, rgba(0,217,255,0.5));
 }
 .bv-card.bv-dragging { opacity: 0.3; }
-.bv-card-badge {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 0.56rem;
-  font-weight: 600;
-  color: #fff;
-  line-height: 1.5;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  text-align: center;
-}
-.bv-card-badge--empty { visibility: hidden; height: 1.2em; }
-.bv-card-name {
-  font-size: 0.78rem;
-  font-weight: 700;
-  line-height: 1.2;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  width: 100%;
-}
-.bv-card-icons { font-size: 0.65rem; line-height: 1; min-height: 0.8em; }
 
-/* view mode — larger cards */
-.bv-col--view .bv-grid { grid-template-columns: repeat(5, 1fr); }
-.bv-col--view .bv-slot { height: 96px; }
-.bv-col--view .bv-card { gap: 4px; }
-.bv-col--view .bv-card-name { font-size: 0.92rem; }
-.bv-col--view .bv-card-badge { font-size: 0.65rem; padding: 2px 8px; }
-.bv-col--view .bv-card-icons { font-size: 0.82rem; }
+.bv-card-panel {
+  position: absolute;
+  top: 18px;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  background:
+    radial-gradient(ellipse at top, rgba(255,255,255,0.05) 0%, transparent 65%),
+    linear-gradient(180deg, rgba(22, 28, 56, 0.97) 0%, rgba(8, 12, 28, 0.98) 100%);
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 1px rgba(0,0,0,0.45),
+    inset 0 0 0 1px rgba(0,0,0,0.35);
+  z-index: 1;
+}
+
+.bv-card-header {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.55);
+  z-index: 5;
+}
+
+.bv-card-stripes {
+  position: absolute;
+  top: 18px;
+  left: 3px;
+  right: 3px;
+  bottom: 3px;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  pointer-events: none;
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 2;
+}
+.bv-stripe {
+  position: relative;
+  width: 25%;
+  height: 100%;
+  flex-shrink: 0;
+}
+.bv-stripe--officer   { background: linear-gradient(180deg, #fde047 0%, #b45309 100%); }
+.bv-stripe--jungle    { background: linear-gradient(180deg, #4ade80 0%, #14532d 100%); }
+.bv-stripe--ninja     { background: linear-gradient(180deg, #a78bfa 0%, #4c1d95 100%); }
+.bv-stripe--gear-high { background: linear-gradient(180deg, #ff1493 0%, #7a0e44 100%); }
+.bv-stripe--gear-low  { background: linear-gradient(180deg, #64748b 0%, #1e293b 100%); }
+
+.bv-stripe-icon {
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.bv-card-name {
+  position: absolute;
+  top: calc(50% + 5px);
+  left: 3px;
+  right: 3px;
+  transform: translateY(-50%);
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+  padding: 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  z-index: 4;
+  letter-spacing: 0.2px;
+  text-shadow:
+    0 1px 4px rgba(0,0,0,0.98),
+    0 0 6px rgba(0,0,0,0.85),
+    0 0 2px rgba(0,0,0,0.95);
+}
+
+/* view mode — більші картки (96px slot) */
+.bv-col--view .bv-grid        { grid-template-columns: repeat(5, 1fr); }
+.bv-col--view .bv-slot        { height: 96px; }
+.bv-col--view .bv-card-name   { font-size: 1.15rem; }
+.bv-col--view .bv-card-header { font-size: 0.66rem; height: 22px; letter-spacing: 0.6px; }
+.bv-col--view .bv-card-panel  { top: 22px; }
+.bv-col--view .bv-card-stripes{ top: 22px; }
+.bv-col--view .bv-stripe-icon { font-size: 1.1rem; bottom: 6px; }
 
 .bv-row {
   display: flex;
@@ -1529,6 +1610,37 @@ body.view-strategy #stats-bar {
   background: rgba(239,68,68,0.10);
   border-color: rgba(239,68,68,0.5);
 }
+
+/* ─── Admin toolbar (список гравців) ────────────────────────────────────── */
+.admin-toolbar {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-admin-action {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: var(--text-muted);
+  padding: 5px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: var(--font);
+  white-space: nowrap;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.btn-admin-action:hover {
+  border-color: rgba(0,217,255,0.40);
+  color: var(--cyan);
+  background: rgba(0,217,255,0.07);
+}
+.btn-admin-import { cursor: pointer; }
 
 /* ─── Add Player button (header) ────────────────────────────────────────── */
 .btn-add-player {

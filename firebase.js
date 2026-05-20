@@ -36,19 +36,16 @@ function fbGetDisplayName() {
 
 function fbUpdateAuthUI() {
   const btn = document.getElementById('auth-btn');
-  const addPlayerBtn = document.getElementById('add-player-btn');
   if (!btn) return;
   if (_fbCurrentUser) {
     const name = fbGetDisplayName();
     btn.innerHTML = `${name} · <span class="auth-signout">Вийти</span>`;
     btn.onclick = fbSignOut;
     btn.classList.add('is-signed-in');
-    if (addPlayerBtn) addPlayerBtn.style.display = '';
   } else {
     btn.innerHTML = '🔐 Увійти';
     btn.onclick = fbOpenLoginModal;
     btn.classList.remove('is-signed-in');
-    if (addPlayerBtn) addPlayerBtn.style.display = 'none';
   }
 }
 

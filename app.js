@@ -376,10 +376,77 @@ function playerCard(p) {
 </div>`;
 }
 
+/* ─── Export / Import ───────────────────────────────────────────────────── */
+function exportPlayers() {
+  const data = PLAYERS.map(({ name, build, altBuild, gearLevel, ready, squad, roles, note }) => ({
+    name, build, altBuild: altBuild ?? null, gearLevel,
+    ready: !!ready, squad: squad ?? null,
+    roles: roles || [], note: note || '',
+  }));
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `gvg-roster-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+async function importPlayers(file) {
+  let arr;
+  try {
+    arr = JSON.parse(await file.text());
+  } catch {
+    alert('Помилка: файл не є валідним JSON');
+    return;
+  }
+  if (!Array.isArray(arr) || !arr.length) {
+    alert('Помилка: очікується непорожній масив гравців');
+    return;
+  }
+  const validBuilds = new Set(Object.keys(BUILDS));
+  const seen = new Set();
+  for (const p of arr) {
+    if (!p.name || typeof p.name !== 'string') { alert('Помилка: кожен гравець повинен мати поле name'); return; }
+    if (!p.build || !validBuilds.has(p.build)) { alert(`Помилка: невідомий білд "${p.build}" у гравця ${p.name}`); return; }
+    if (seen.has(p.name)) { alert(`Помилка: дублікат імені "${p.name}"`); return; }
+    seen.add(p.name);
+  }
+  if (!confirm(`Замінити поточних ${PLAYERS.length} гравців на ${arr.length} з файлу?`)) return;
+  const map = {};
+  arr.forEach(p => {
+    map[p.name] = {
+      build:     p.build,
+      altBuild:  p.altBuild  ?? null,
+      gearLevel: p.gearLevel || 'mid',
+      ready:     p.ready     ?? true,
+      squad:     p.squad     ?? null,
+      roles:     Array.isArray(p.roles) ? p.roles : [],
+      note:      p.note      || '',
+    };
+  });
+  try {
+    await fbSaveAllPlayers(map);
+  } catch (err) {
+    alert('Помилка збереження: ' + (err?.message ?? err));
+  }
+}
+
 /* ─── View renderers ────────────────────────────────────────────────────── */
 function viewList(players) {
-  if (!players.length) return '<p class="empty">Немає гравців за заданими критеріями.</p>';
-  return `<div class="player-grid">${players.map(playerCard).join('')}</div>`;
+  const isAdmin = typeof fbIsAdmin === 'function' && fbIsAdmin();
+  const adminBar = isAdmin ? `<div class="admin-toolbar">
+    <button class="btn-admin-action" data-action="export-players">⤓ Експорт JSON</button>
+    <label class="btn-admin-action btn-admin-import">
+      ↑ Імпорт JSON
+      <input type="file" accept=".json" class="import-file-input" style="display:none">
+    </label>
+  </div>` : '';
+  const grid = players.length
+    ? `<div class="player-grid">${players.map(playerCard).join('')}</div>`
+    : '<p class="empty">Немає гравців за заданими критеріями.</p>';
+  return adminBar + grid;
 }
 
 function viewGrouped(players) {
@@ -500,14 +567,35 @@ function bvRow(p, draggable) {
 }
 
 function bvCard(name) {
-  const p = PLAYERS.find(x => x.name === name);
-  const b = p ? getBuild(p.build) : null;
-  const icons = p ? (p.roles || []).map(r => ROLE_ICONS[r] || '').filter(Boolean).join('') : '';
-  const drag = battleEditMode ? ' draggable="true"' : '';
-  const badgeHtml = b
-    ? `<span class="bv-card-badge" style="background:${b.color}">${esc(b.label)}</span>`
-    : `<span class="bv-card-badge bv-card-badge--empty"></span>`;
-  return `<div class="bv-card" data-player="${esc(name)}"${drag}>${badgeHtml}<span class="bv-card-name">${esc(name)}</span><span class="bv-card-icons">${icons}</span></div>`;
+  const p          = PLAYERS.find(x => x.name === name);
+  const b          = p ? getBuild(p.build) : null;
+  const roles      = p ? (p.roles || []) : [];
+  const gear       = (p && p.gearLevel) || 'mid';
+  const drag       = battleEditMode ? ' draggable="true"' : '';
+  const buildColor = b ? b.color : 'rgba(80, 86, 110, 1)';
+  const buildLabel = b ? esc(b.label) : '';
+
+  // вертикальні смуги — кожна 25% ширини картки, малюємо лише активні
+  // (порядок зліва направо: Officer → Jungle → Ninja → Gear)
+  // Gear — лише для high (▲) / low (▼); mid взагалі не показуємо
+  const stripes = [];
+  if (roles.includes('Officer'))
+    stripes.push(`<span class="bv-stripe bv-stripe--officer"><span class="bv-stripe-icon">👑</span></span>`);
+  if (roles.includes('Jungle'))
+    stripes.push(`<span class="bv-stripe bv-stripe--jungle"><span class="bv-stripe-icon">🌿</span></span>`);
+  if (roles.includes('Ninja'))
+    stripes.push(`<span class="bv-stripe bv-stripe--ninja"><span class="bv-stripe-icon">🥷</span></span>`);
+  if (gear === 'high')
+    stripes.push(`<span class="bv-stripe bv-stripe--gear-high" title="Gear: high"><span class="bv-stripe-icon">▲</span></span>`);
+  else if (gear === 'low')
+    stripes.push(`<span class="bv-stripe bv-stripe--gear-low" title="Gear: low"><span class="bv-stripe-icon">▼</span></span>`);
+
+  return `<div class="bv-card" data-player="${esc(name)}"${drag} style="--bc:${buildColor}">
+  <div class="bv-card-panel" aria-hidden="true"></div>
+  <div class="bv-card-header">${buildLabel}</div>
+  <div class="bv-card-stripes" aria-hidden="true">${stripes.join('')}</div>
+  <span class="bv-card-name">${esc(name)}</span>
+</div>`;
 }
 
 function bvSlot(squad, zone, idx) {
@@ -962,6 +1050,13 @@ function render() {
   const isStrategy = state.viewMode === 'strategy';
   document.body.classList.toggle('view-strategy', isStrategy);
 
+  // Кнопка "+ Гравець" тільки на вкладці "Гравці" для адміна
+  const addBtn = document.getElementById('add-player-btn');
+  if (addBtn) {
+    const isAdmin = typeof fbIsAdmin === 'function' && fbIsAdmin();
+    addBtn.style.display = (state.viewMode === 'list' && isAdmin) ? '' : 'none';
+  }
+
   switch (state.viewMode) {
     case 'grouped':  $roster.innerHTML = viewGrouped(sorted); break;
     case 'battle':   $roster.innerHTML = viewBattle();        break;
@@ -1244,13 +1339,25 @@ function initEvents() {
     $legendToggle.setAttribute('aria-expanded', String(!hidden));
   });
 
-  // ─── Редагування гравця з картки ────────────────────────────────────────
+  // ─── Адмін-дії в списку гравців (export / import / edit) ────────────────
   $roster.addEventListener('click', e => {
+    if (e.target.closest('[data-action="export-players"]')) {
+      exportPlayers();
+      return;
+    }
     const editBtn = e.target.closest('[data-action="edit-player"]');
     if (editBtn) {
       const player = PLAYERS.find(p => p.name === editBtn.dataset.player);
       if (player) showPlayerModal(player);
       return;
+    }
+  });
+
+  $roster.addEventListener('change', e => {
+    const fileInput = e.target.closest('.import-file-input');
+    if (fileInput && fileInput.files[0]) {
+      importPlayers(fileInput.files[0]);
+      fileInput.value = ''; // дозволяє повторний вибір того ж файлу
     }
   });
 
