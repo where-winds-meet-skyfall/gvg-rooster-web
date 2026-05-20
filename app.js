@@ -570,43 +570,42 @@ function bvCard(name) {
   const p          = PLAYERS.find(x => x.name === name);
   const b          = p ? getBuild(p.build) : null;
   const roles      = p ? (p.roles || []) : [];
-  const gear       = (p && p.gearLevel) || 'mid';
+  const isOfficer  = roles.includes('Officer');
+  const isJungle   = roles.includes('Jungle');
+  const isNinja    = roles.includes('Ninja');
+  const isMvp      = !!(p && p.gearLevel === 'high');
   const drag       = battleEditMode ? ' draggable="true"' : '';
   const buildColor = b ? b.color : 'rgba(80, 86, 110, 1)';
   const buildLabel = b ? esc(b.label) : '';
 
-  // 4 фіксовані слоти полос: Officer · Jungle · Ninja · Gear
-  // якщо тега немає — слот порожній (пропуск між полосами)
-  // Gear: high → MVP, low → ▼, mid → пропуск
-  const slot = (cls, on, icon) =>
-    on
-      ? `<span class="bv-stripe ${cls}"><span class="bv-stripe-icon">${icon}</span></span>`
-      : `<span class="bv-stripe bv-stripe--empty" aria-hidden="true"></span>`;
+  const officer = isOfficer
+    ? `<span class="bv-officer-mark" title="Officer">♛</span>`
+    : '';
 
-  let gearSlot;
-  if (gear === 'high') {
-    gearSlot = `<span class="bv-stripe bv-stripe--gear-high" title="Gear: high"><span class="bv-stripe-icon bv-stripe-icon--text">MVP</span></span>`;
-  } else if (gear === 'low') {
-    gearSlot = `<span class="bv-stripe bv-stripe--gear-low" title="Gear: low"><span class="bv-stripe-icon">▼</span></span>`;
-  } else {
-    gearSlot = `<span class="bv-stripe bv-stripe--empty" aria-hidden="true"></span>`;
+  const tagBits = [];
+  if (isJungle) {
+    tagBits.push(
+      `<span class="bv-tag bv-tag--jungle" title="Jungle">` +
+      `<span class="bv-tag-glyph">✿</span>JNG</span>`
+    );
   }
+  if (isNinja) {
+    tagBits.push(
+      `<span class="bv-tag bv-tag--ninja" title="Ninja">` +
+      `<span class="bv-tag-glyph">◆</span>NIN</span>`
+    );
+  }
+  const tags = tagBits.length
+    ? `<div class="bv-card-tags">${tagBits.join('')}</div>`
+    : '';
 
-  const officerSlot = roles.includes('Officer')
-    ? `<span class="bv-stripe bv-stripe--officer" title="Officer"></span>`
-    : `<span class="bv-stripe bv-stripe--empty" aria-hidden="true"></span>`;
-
-  const stripes =
-    officerSlot +
-    slot('bv-stripe--jungle',  roles.includes('Jungle'),  '🌿') +
-    slot('bv-stripe--ninja',   roles.includes('Ninja'),   '🥷') +
-    gearSlot;
+  const mvp = isMvp ? `<div class="bv-mvp" aria-hidden="true"></div>` : '';
 
   return `<div class="bv-card" data-player="${esc(name)}"${drag} style="--bc:${buildColor}">
-  <div class="bv-card-panel" aria-hidden="true"></div>
-  <div class="bv-card-header">${buildLabel}</div>
-  <div class="bv-card-stripes" aria-hidden="true">${stripes}</div>
-  <span class="bv-card-name">${esc(name)}</span>
+  <div class="bv-card-build">${buildLabel}</div>
+  <div class="bv-card-name">${officer}<span class="bv-name-text">${esc(name)}</span></div>
+  ${tags}
+  ${mvp}
 </div>`;
 }
 

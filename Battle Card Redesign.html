@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle Card — F4 финальный</title>
+  <style>
+    /* ─── Aurora base (взято из style.css проекта) ────────────────────── */
+    :root {
+      --bg: #07091a;
+      --surface: rgba(255,255,255,0.04);
+      --text: #eef2ff;
+      --text-muted: rgba(165,180,225,0.75);
+      --accent: #4a9eff;
+      --radius-sm: 8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      min-height: 100dvh;
+      padding: 24px;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 15% 40%, rgba(0,128,255,0.14) 0%, transparent 65%),
+        radial-gradient(ellipse 60% 50% at 85% 15%, rgba(255,20,147,0.11) 0%, transparent 60%),
+        radial-gradient(ellipse 70% 60% at 55% 85%, rgba(0,217,255,0.10) 0%, transparent 65%);
+    }
+
+    /* ─── Battle view scaffolding (упрощённое) ──────────────────────── */
+    .bv-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 1600px; margin: 0 auto; }
+    .bv-col { display: flex; flex-direction: column; gap: 6px; }
+    .bv-col-hdr {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px;
+      background: rgba(255,255,255,0.04);
+      border-left: 4px solid;
+      border-radius: var(--radius-sm);
+      font-weight: 700; font-size: 0.9rem;
+    }
+    .bv-col-hdr--attack { border-color: #ff5470; color: #ff5470; }
+    .bv-col-hdr--defence { border-color: #4a9eff; color: #4a9eff; }
+    .bv-count { margin-left: auto; font-size: 0.78rem; }
+    .bv-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 5px;
+    }
+    .bv-slot {
+      height: 68px;
+      border-radius: 8px;
+      transition: background 0.12s;
+    }
+    .bv-slot--empty {
+      border: 1.5px dashed rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.02);
+    }
+    .bv-slot--filled { border: none; }
+
+    /* ────────────────────────────────────────────────────────────────
+       ★ Финальный дизайн карточки (F4)
+       копировать целиком в style.css, заменяя текущие .bv-card*
+       и .bv-stripe*
+       ──────────────────────────────────────────────────────────────── */
+
+    .bv-card {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 12px;
+      background: #0d1126;
+      border: 1px solid rgba(255,255,255,0.08);
+      overflow: hidden;
+      user-select: none;
+      transition: transform 0.14s ease, box-shadow 0.18s ease, border-color 0.18s;
+      box-shadow:
+        0 3px 10px -3px rgba(0,0,0,0.55),
+        inset 0 0 0 1px rgba(255,255,255,0.02);
+    }
+    .bv-card[draggable="true"] { cursor: grab; }
+    .bv-card[draggable="true"]:hover {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--bc, var(--accent)) 45%, transparent);
+      box-shadow:
+        0 6px 18px -4px rgba(0,0,0,0.65),
+        0 0 14px -2px color-mix(in srgb, var(--bc, var(--accent)) 35%, transparent);
+    }
+    .bv-card.bv-dragging { opacity: 0.3; }
+
+    /* Тонкая верхняя черта = build color */
+    .bv-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--bc, var(--accent));
+      opacity: 0.85;
+      z-index: 3;
+    }
+
+    /* Build label вверху */
+    .bv-card-build {
+      position: absolute;
+      top: 5px; left: 10px; right: 10px;
+      font-size: 0.56rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--bc, var(--accent));
+      opacity: 0.92;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 3;
+      line-height: 1;
+    }
+
+    /* Имя по центру + место для иконки офицера слева */
+    .bv-card-name {
+      position: absolute;
+      top: 18px; bottom: 18px;
+      left: 10px; right: 10px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #f7faff;
+      line-height: 1.05;
+      letter-spacing: 0.2px;
+      z-index: 2;
+      overflow: hidden;
+    }
+    .bv-card-name .bv-name-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    }
+
+    /* Корона офицера — маленькая, ненавязчивая */
+    .bv-officer-mark {
+      font-size: 0.85em;
+      color: #eab308;
+      text-shadow: 0 0 6px rgba(234,179,8,0.45);
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    /* Нижний ряд — компактные чипы Jungle/Ninja */
+    .bv-card-tags {
+      position: absolute;
+      left: 8px; right: 8px;
+      bottom: 4px;
+      display: flex;
+      gap: 4px;
+      height: 14px;
+      align-items: center;
+      z-index: 2;
+    }
+    .bv-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 0 5px;
+      height: 14px;
+      border-radius: 999px;
+      font-size: 0.52rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      line-height: 14px;
+      white-space: nowrap;
+    }
+    .bv-tag-glyph { font-size: 0.7rem; line-height: 1; }
+    .bv-tag--jungle {
+      background: rgba(34,197,94,0.14);
+      border: 1px solid rgba(34,197,94,0.42);
+      color: #4ade80;
+    }
+    .bv-tag--ninja {
+      background: rgba(148,163,184,0.16);
+      border: 1px solid rgba(148,163,184,0.42);
+      color: #cbd5e1;
+    }
+
+    /* MVP — две тонкие розовые косые в правом верхнем углу */
+    .bv-mvp {
+      position: absolute;
+      top: 0; right: 0;
+      width: 56px;
+      height: 56px;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 1;
+    }
+    .bv-mvp::before,
+    .bv-mvp::after {
+      content: '';
+      position: absolute;
+      right: -18px;
+      width: 80px;
+      height: 1px;
+      transform: rotate(-45deg);
+      transform-origin: right center;
+    }
+    .bv-mvp::before {
+      top: 8px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(236,72,153,0.7) 55%,
+        rgba(236,72,153,0.95) 100%);
+    }
+    .bv-mvp::after {
+      top: 15px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(236,72,153,0.45) 55%,
+        rgba(236,72,153,0.65) 100%);
+    }
+
+    /* View mode (бóльшие карточки 96px) */
+    .bv-col--view .bv-slot        { height: 96px; }
+    .bv-col--view .bv-card-name   { font-size: 1.15rem; top: 22px; bottom: 22px; }
+    .bv-col--view .bv-card-build  { font-size: 0.66rem; top: 7px; letter-spacing: 0.15em; }
+    .bv-col--view .bv-card-tags   { height: 16px; bottom: 6px; }
+    .bv-col--view .bv-tag         { height: 16px; line-height: 16px; padding: 0 7px; font-size: 0.6rem; }
+    .bv-col--view .bv-tag-glyph   { font-size: 0.78rem; }
+    .bv-col--view .bv-mvp         { width: 72px; height: 72px; }
+    .bv-col--view .bv-mvp::before { top: 12px; }
+    .bv-col--view .bv-mvp::after  { top: 21px; }
+
+    /* Section labels */
+    .label {
+      font-size: 0.7rem;
+      color: rgba(165,180,225,0.55);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+      margin: 32px 0 12px;
+    }
+    .label:first-of-type { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <div class="label">Edit mode (68px slots) — основной вид</div>
+
+  <div class="bv-columns">
+    <div class="bv-col">
+      <div class="bv-col-hdr bv-col-hdr--attack">
+        ⚔ Attack
+        <span class="bv-count">16/20</span>
+      </div>
+      <div class="bv-grid" id="attack-grid"></div>
+    </div>
+    <div class="bv-col">
+      <div class="bv-col-hdr bv-col-hdr--defence">
+        🛡 Defence
+        <span class="bv-count">14/20</span>
+      </div>
+      <div class="bv-grid" id="defence-grid"></div>
+    </div>
+  </div>
+
+  <div class="label">View mode (96px slots) — режим просмотра</div>
+
+  <div class="bv-columns">
+    <div class="bv-col bv-col--view">
+      <div class="bv-col-hdr bv-col-hdr--attack">⚔ Attack</div>
+      <div class="bv-grid" id="attack-view"></div>
+    </div>
+    <div class="bv-col bv-col--view">
+      <div class="bv-col-hdr bv-col-hdr--defence">🛡 Defence</div>
+      <div class="bv-grid" id="defence-view"></div>
+    </div>
+  </div>
+
+  <script>
+    // Из data.js проекта (упрощено для превью)
+    const BUILDS = {
+      heal:            { label: 'Heal',          color: '#22c55e' },
+      umbrella_dd:     { label: 'Umbrella',      color: '#f97316' },
+      umbrella_dd_aoe: { label: 'Umbrella AOE',  color: '#a855f7' },
+      nameless:        { label: 'Nameless',      color: '#3b82f6' },
+      strategic:       { label: 'Strategic',     color: '#60a5fa' },
+      duals:           { label: 'Duals',         color: '#d946ef' },
+      tank:            { label: 'Tank',          color: '#eab308' },
+      katana:          { label: 'Katana',        color: '#be123c' },
+    };
+
+    // Тот же набор игроков что использовался в design canvas + реальные из data.js.
+    // gearLevel: 'high' = MVP (существующая конвенция кодовой базы).
+    const ATTACK = [
+      { name: 'arhangels',     build: 'heal',            roles: [],                                 gearLevel: 'mid'  },
+      { name: 'OldRock',       build: 'tank',            roles: ['Officer'],                        gearLevel: 'mid'  },
+      { name: 'DzirT',         build: 'nameless',        roles: [],                                 gearLevel: 'mid'  },
+      { name: 'datsann',       build: 'nameless',        roles: [],                                 gearLevel: 'mid'  },
+      { name: 'Endurist',      build: 'nameless',        roles: ['Jungle'],                         gearLevel: 'high' },
+      { name: 'Jianggi',       build: 'heal',            roles: [],                                 gearLevel: 'mid'  },
+      { name: 'LuoJue-Lin',    build: 'tank',            roles: [],                                 gearLevel: 'mid'  },
+      { name: 'Kelevra',       build: 'nameless',        roles: ['Officer'],                        gearLevel: 'high' },
+      { name: 'SunRise',       build: 'nameless',        roles: ['Jungle'],                         gearLevel: 'mid'  },
+      { name: 'Geerion',       build: 'nameless',        roles: [],                                 gearLevel: 'high' },
+      { name: 'LuthiXia',      build: 'heal',            roles: ['Officer'],                        gearLevel: 'mid'  },
+      { name: 'StanislavZal',  build: 'duals',           roles: ['Ninja'],                          gearLevel: 'mid'  },
+      { name: 'BayarD',        build: 'strategic',       roles: [],                                 gearLevel: 'high' },
+      { name: 'EnEr',          build: 'umbrella_dd_aoe', roles: ['Jungle'],                         gearLevel: 'mid'  },
+      { name: 'CantBeTouched', build: 'katana',          roles: ['Officer','Jungle'],               gearLevel: 'high' },
+      { name: 'Nixmoonky',     build: 'heal',            roles: [],                                 gearLevel: 'mid'  },
+    ];
+    const DEFENCE = [
+      { name: 'Aiswill',       build: 'heal',            roles: [],                                 gearLevel: 'mid'  },
+      { name: 'MasterFoobar',  build: 'tank',            roles: [],                                 gearLevel: 'mid'  },
+      { name: 'MariSkywalker', build: 'katana',          roles: [],                                 gearLevel: 'mid'  },
+      { name: 'lHanLil',       build: 'nameless',        roles: [],                                 gearLevel: 'mid'  },
+      { name: 'CyMþak',        build: 'strategic',       roles: ['Jungle'],                         gearLevel: 'mid'  },
+      { name: 'LuminarA',      build: 'heal',            roles: [],                                 gearLevel: 'mid'  },
+      { name: 'LELUSH',        build: 'tank',            roles: ['Officer','Jungle'],               gearLevel: 'mid'  },
+      { name: 'Chifusama',     build: 'katana',          roles: ['Officer','Jungle'],               gearLevel: 'mid'  },
+      { name: 'Espeir',        build: 'nameless',        roles: ['Jungle'],                         gearLevel: 'mid'  },
+      { name: 'ArthurPencilgun', build: 'duals',         roles: ['Ninja'],                          gearLevel: 'mid'  },
+      { name: 'Nanaaaaami',    build: 'heal',            roles: [],                                 gearLevel: 'mid'  },
+      { name: 'AUrory',        build: 'umbrella_dd',     roles: ['Officer','Jungle','Ninja'],       gearLevel: 'high' },
+      { name: 'PonIka',        build: 'nameless',        roles: ['Jungle'],                         gearLevel: 'mid'  },
+      { name: 'QiShye',        build: 'nameless',        roles: ['Jungle'],                         gearLevel: 'mid'  },
+    ];
+
+    // ★ Финальная функция рендера — копировать в app.js, заменяя bvCard()
+    function bvCard(p, opts) {
+      opts = opts || {};
+      const draggable = opts.draggable !== false;
+      const b = BUILDS[p.build];
+      const buildColor = b ? b.color : 'rgba(80,86,110,1)';
+      const buildLabel = b ? b.label : '';
+      const isOfficer = (p.roles || []).includes('Officer');
+      const isJungle  = (p.roles || []).includes('Jungle');
+      const isNinja   = (p.roles || []).includes('Ninja');
+      const isMvp     = p.gearLevel === 'high';
+
+      const officer = isOfficer
+        ? `<span class="bv-officer-mark" title="Officer">♛</span>`
+        : '';
+
+      const tagBits = [];
+      if (isJungle) {
+        tagBits.push(`<span class="bv-tag bv-tag--jungle" title="Jungle">`
+          + `<span class="bv-tag-glyph">✿</span>JNG</span>`);
+      }
+      if (isNinja) {
+        tagBits.push(`<span class="bv-tag bv-tag--ninja" title="Ninja">`
+          + `<span class="bv-tag-glyph">◆</span>NIN</span>`);
+      }
+      const tags = tagBits.length
+        ? `<div class="bv-card-tags">${tagBits.join('')}</div>`
+        : '';
+      const mvp = isMvp ? `<div class="bv-mvp" aria-hidden="true"></div>` : '';
+
+      return `<div class="bv-card" data-player="${p.name}"`
+        + (draggable ? ' draggable="true"' : '')
+        + ` style="--bc:${buildColor}">`
+        + `<div class="bv-card-build">${buildLabel}</div>`
+        + `<div class="bv-card-name">${officer}`
+        +   `<span class="bv-name-text">${p.name}</span>`
+        + `</div>`
+        + tags
+        + mvp
+        + `</div>`;
+    }
+
+    function renderGrid(id, players, slots) {
+      const grid = document.getElementById(id);
+      const html = [];
+      for (let i = 0; i < slots; i++) {
+        if (players[i]) {
+          html.push(`<div class="bv-slot bv-slot--filled">${bvCard(players[i])}</div>`);
+        } else {
+          html.push(`<div class="bv-slot bv-slot--empty"></div>`);
+        }
+      }
+      grid.innerHTML = html.join('');
+    }
+
+    renderGrid('attack-grid',  ATTACK,  20);
+    renderGrid('defence-grid', DEFENCE, 20);
+    renderGrid('attack-view',  ATTACK.slice(0, 10),  10);
+    renderGrid('defence-view', DEFENCE.slice(0, 10), 10);
+  </script>
+</body>
+</html>
