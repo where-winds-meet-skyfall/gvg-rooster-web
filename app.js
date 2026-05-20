@@ -592,8 +592,12 @@ function bvCard(name) {
     gearSlot = `<span class="bv-stripe bv-stripe--empty" aria-hidden="true"></span>`;
   }
 
+  const officerSlot = roles.includes('Officer')
+    ? `<span class="bv-stripe bv-stripe--officer" title="Officer"></span>`
+    : `<span class="bv-stripe bv-stripe--empty" aria-hidden="true"></span>`;
+
   const stripes =
-    slot('bv-stripe--officer', roles.includes('Officer'), '👑') +
+    officerSlot +
     slot('bv-stripe--jungle',  roles.includes('Jungle'),  '🌿') +
     slot('bv-stripe--ninja',   roles.includes('Ninja'),   '🥷') +
     gearSlot;
