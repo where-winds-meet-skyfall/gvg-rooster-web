@@ -644,10 +644,16 @@ function viewBattle() {
   const atkFilled = battleSlots.attack.main.filter(Boolean).length + battleSlots.attack.reserve.filter(Boolean).length;
   const defFilled = battleSlots.def.main.filter(Boolean).length    + battleSlots.def.reserve.filter(Boolean).length;
 
+  const canEdit = typeof fbIsAdmin === 'function' && fbIsAdmin();
+  const toolbarBtns = battleEditMode
+    ? `<button class="btn-bv-edit active" data-action="bv-toggle-edit">✓ Готово</button><button class="btn-bv-reset" data-action="bv-reset">🗑 Очистити пачки</button>`
+    : `${canEdit ? `<button class="btn-bv-edit" data-action="bv-toggle-edit">✏️ Редагувати</button>` : ''}<button class="btn-bv-photo" data-action="bv-save-photo">📷 Зберегти фото</button>`;
+
   $statsBar.innerHTML = `<div class="stats-summary">
   <span class="stat-pill" style="background:#ef4444">⚔️ Attack: ${atkFilled}</span>
   <span class="stat-pill" style="background:#3b82f6">🛡️ Defence: ${defFilled}</span>
   ${free.length ? `<span class="stat-pill" style="background:#64748b">🔄 Вільні: ${free.length}</span>` : ''}
+  <div class="stats-actions">${toolbarBtns}</div>
 </div>`;
   $statsBar.classList.remove('hidden');
 
@@ -683,15 +689,9 @@ function viewBattle() {
     </aside>`;
   })() : '';
 
-  const canEdit = typeof fbIsAdmin === 'function' && fbIsAdmin();
-  const toolbarBtns = battleEditMode
-    ? `<button class="btn-bv-edit active" data-action="bv-toggle-edit">✓ Готово</button><button class="btn-bv-reset" data-action="bv-reset">🗑 Очистити пачки</button>`
-    : `${canEdit ? `<button class="btn-bv-edit" data-action="bv-toggle-edit">✏️ Редагувати</button>` : ''}<button class="btn-bv-photo" data-action="bv-save-photo">📷 Зберегти фото</button>`;
-
   return `<div class="bv-wrap${battleEditMode ? ' bv-edit' : ''}">
   <div class="bv-main">
     ${!battleEditMode ? presetBarBattle() : ''}
-    <div class="bv-toolbar">${toolbarBtns}</div>
     <div class="bv-columns">
       ${bvColumn('attack')}
       ${bvColumn('def')}
@@ -729,7 +729,7 @@ function svGetPos(e) {
   return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
 }
 
-function svDrawArrow(ctx, x1, y1, x2, y2, color, alpha) {
+function svDrawArrow(ctx, x1, y1, x2, y2, color, alpha, dashed) {
   alpha = alpha ?? 1;
   const dx = x2 - x1, dy = y2 - y1;
   if (Math.sqrt(dx * dx + dy * dy) < 6) return;
@@ -740,13 +740,15 @@ function svDrawArrow(ctx, x1, y1, x2, y2, color, alpha) {
   ctx.strokeStyle  = color;
   ctx.fillStyle    = color;
   ctx.lineWidth    = 4;
-  ctx.lineCap      = 'round';
+  ctx.lineCap      = dashed ? 'butt' : 'round';
   ctx.shadowColor  = color;
   ctx.shadowBlur   = 8;
+  if (dashed) ctx.setLineDash([12, 8]);
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2 - headLen * 0.65 * Math.cos(angle), y2 - headLen * 0.65 * Math.sin(angle));
   ctx.stroke();
+  if (dashed) ctx.setLineDash([]);
   ctx.beginPath();
   ctx.moveTo(x2, y2);
   ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
@@ -829,7 +831,7 @@ function svDrawCanvas(preview) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
   elements.forEach(el => {
-    if (el.type === 'arrow')  svDrawArrow(ctx, el.x1, el.y1, el.x2, el.y2, el.color);
+    if (el.type === 'arrow')  svDrawArrow(ctx, el.x1, el.y1, el.x2, el.y2, el.color, 1, el.dashed);
     if (el.type === 'player') svDrawPlayer(ctx, el.x, el.y, el.name, el.color, el.build);
   });
   if (arrowStart) {
@@ -842,7 +844,7 @@ function svDrawCanvas(preview) {
     ctx.shadowBlur  = 10;
     ctx.fill();
     ctx.restore();
-    if (preview) svDrawArrow(ctx, arrowStart.x, arrowStart.y, preview.x, preview.y, color, 0.55);
+    if (preview) svDrawArrow(ctx, arrowStart.x, arrowStart.y, preview.x, preview.y, color, 0.55, sv.tool === 'arrowDashed');
   }
 }
 
@@ -883,11 +885,13 @@ function svHandleClick(e) {
   if (e.type === 'touchend') e.preventDefault();
   const pos = svGetPos(e);
 
-  if (sv.tool === 'arrow') {
+  if (sv.tool === 'arrow' || sv.tool === 'arrowDashed') {
     if (!sv.arrowStart) {
       sv.arrowStart = pos;
     } else {
-      sv.elements.push({ type: 'arrow', x1: sv.arrowStart.x, y1: sv.arrowStart.y, x2: pos.x, y2: pos.y, color: sv.color });
+      const el = { type: 'arrow', x1: sv.arrowStart.x, y1: sv.arrowStart.y, x2: pos.x, y2: pos.y, color: sv.color };
+      if (sv.tool === 'arrowDashed') el.dashed = true;
+      sv.elements.push(el);
       sv.arrowStart = null;
       svDrawCanvas();
     }
@@ -909,7 +913,7 @@ function svHandleClick(e) {
 }
 
 function svHandleMove(e) {
-  if (sv.tool === 'arrow' && sv.arrowStart) {
+  if ((sv.tool === 'arrow' || sv.tool === 'arrowDashed') && sv.arrowStart) {
     if (e.cancelable) e.preventDefault();
     svDrawCanvas(svGetPos(e));
   }
@@ -1023,6 +1027,7 @@ function viewStrategy() {
   <div class="sv-toolbar">
     <div class="sv-tool-group">
       ${toolBtn('arrow')}↗ Стрілка</button>
+      ${toolBtn('arrowDashed')}⇢ Пунктир</button>
       ${toolBtn('player')}📍 Гравець</button>
       ${toolBtn('erase')}✕ Ластик</button>
     </div>
@@ -1373,7 +1378,7 @@ function initEvents() {
   });
 
   // ─── Бойовий вигляд: редагування + DnD ─────────────────────────────────
-  $roster.addEventListener('click', e => {
+  document.addEventListener('click', e => {
     if (e.target.closest('[data-action="bv-toggle-edit"]')) {
       if (!battleEditMode) {
         if (!battleSlots) initBattleSlots();

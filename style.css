@@ -539,6 +539,11 @@ details[open] .filters-summary::before { content: "▾"; }
   gap: 8px;
   font-size: 0.875rem;
 }
+.stats-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
 
 .stat-pill {
   padding: 3px 12px;
@@ -809,7 +814,6 @@ details[open] > .group-header::before { content: "▾"; }
 
 .bv-wrap { display: flex; gap: 16px; align-items: flex-start; }
 .bv-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-.bv-toolbar { display: flex; justify-content: flex-end; gap: 8px; }
 .btn-bv-edit,
 .btn-bv-reset,
 .btn-bv-photo {
