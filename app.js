@@ -575,25 +575,33 @@ function bvCard(name) {
   const buildColor = b ? b.color : 'rgba(80, 86, 110, 1)';
   const buildLabel = b ? esc(b.label) : '';
 
-  // вертикальні смуги — кожна 25% ширини картки, малюємо лише активні
-  // (порядок зліва направо: Officer → Jungle → Ninja → Gear)
-  // Gear — лише для high (▲) / low (▼); mid взагалі не показуємо
-  const stripes = [];
-  if (roles.includes('Officer'))
-    stripes.push(`<span class="bv-stripe bv-stripe--officer"><span class="bv-stripe-icon">👑</span></span>`);
-  if (roles.includes('Jungle'))
-    stripes.push(`<span class="bv-stripe bv-stripe--jungle"><span class="bv-stripe-icon">🌿</span></span>`);
-  if (roles.includes('Ninja'))
-    stripes.push(`<span class="bv-stripe bv-stripe--ninja"><span class="bv-stripe-icon">🥷</span></span>`);
-  if (gear === 'high')
-    stripes.push(`<span class="bv-stripe bv-stripe--gear-high" title="Gear: high"><span class="bv-stripe-icon">▲</span></span>`);
-  else if (gear === 'low')
-    stripes.push(`<span class="bv-stripe bv-stripe--gear-low" title="Gear: low"><span class="bv-stripe-icon">▼</span></span>`);
+  // 4 фіксовані слоти полос: Officer · Jungle · Ninja · Gear
+  // якщо тега немає — слот порожній (пропуск між полосами)
+  // Gear: high → MVP, low → ▼, mid → пропуск
+  const slot = (cls, on, icon) =>
+    on
+      ? `<span class="bv-stripe ${cls}"><span class="bv-stripe-icon">${icon}</span></span>`
+      : `<span class="bv-stripe bv-stripe--empty" aria-hidden="true"></span>`;
+
+  let gearSlot;
+  if (gear === 'high') {
+    gearSlot = `<span class="bv-stripe bv-stripe--gear-high" title="Gear: high"><span class="bv-stripe-icon bv-stripe-icon--text">MVP</span></span>`;
+  } else if (gear === 'low') {
+    gearSlot = `<span class="bv-stripe bv-stripe--gear-low" title="Gear: low"><span class="bv-stripe-icon">▼</span></span>`;
+  } else {
+    gearSlot = `<span class="bv-stripe bv-stripe--empty" aria-hidden="true"></span>`;
+  }
+
+  const stripes =
+    slot('bv-stripe--officer', roles.includes('Officer'), '👑') +
+    slot('bv-stripe--jungle',  roles.includes('Jungle'),  '🌿') +
+    slot('bv-stripe--ninja',   roles.includes('Ninja'),   '🥷') +
+    gearSlot;
 
   return `<div class="bv-card" data-player="${esc(name)}"${drag} style="--bc:${buildColor}">
   <div class="bv-card-panel" aria-hidden="true"></div>
   <div class="bv-card-header">${buildLabel}</div>
-  <div class="bv-card-stripes" aria-hidden="true">${stripes.join('')}</div>
+  <div class="bv-card-stripes" aria-hidden="true">${stripes}</div>
   <span class="bv-card-name">${esc(name)}</span>
 </div>`;
 }

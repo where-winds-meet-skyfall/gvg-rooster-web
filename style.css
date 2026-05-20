@@ -907,9 +907,9 @@ details[open] > .group-header::before { content: "▾"; }
 /* картка бойової пачки: header з білдом + рамка кольору білда,
    ім'я крупно по центру (трохи вище), 4 косі вертикальні смуги
    ролей+гіру на правій чверті */
-/* картка бойової пачки: фон = колір білда (рамка), всередині темна
-   панель з плавними кутами, заголовок зверху, ім'я по центру,
-   праві 25% — вертикальні смуги ролей+гіра */
+/* картка бойової пачки: фон = колір білда (рамка згори + з боків,
+   без нижнього бордера), всередині темна панель з плавним верхом,
+   ім'я поверх 4 фіксованих смуг ролей+гіра */
 .bv-card {
   position: relative;
   width: 100%;
@@ -919,39 +919,39 @@ details[open] > .group-header::before { content: "▾"; }
   box-sizing: border-box;
   overflow: hidden;
   user-select: none;
-  transition: transform 0.14s ease, box-shadow 0.18s ease, filter 0.14s ease;
+  transition: transform 0.14s ease, box-shadow 0.18s ease;
   box-shadow:
     0 3px 10px -3px rgba(0,0,0,0.55),
-    inset 0 0 0 1px rgba(255,255,255,0.10),
-    inset 0 -1px 0 rgba(0,0,0,0.30);
+    inset 0 0 0 1px rgba(255,255,255,0.08);
 }
 .bv-card[draggable="true"] { cursor: grab; }
 .bv-card[draggable="true"]:hover {
   transform: translateY(-1px);
-  filter: brightness(1.08);
   box-shadow:
     0 6px 18px -4px rgba(0,0,0,0.65),
-    inset 0 0 0 1px rgba(255,255,255,0.15),
-    0 0 16px -2px var(--bc, rgba(0,217,255,0.5));
+    inset 0 0 0 1px rgba(255,255,255,0.13),
+    0 0 14px -2px var(--bc, rgba(0,217,255,0.45));
 }
 .bv-card.bv-dragging { opacity: 0.3; }
 
+/* темна панель: верх відступає на 18px (видно build-color band),
+   боки на 3px (тонка кольорова рамка), низ 0 — нижнього бордера немає */
 .bv-card-panel {
   position: absolute;
   top: 18px;
   left: 3px;
   right: 3px;
-  bottom: 3px;
-  background:
-    radial-gradient(ellipse at top, rgba(255,255,255,0.05) 0%, transparent 65%),
-    linear-gradient(180deg, rgba(22, 28, 56, 0.97) 0%, rgba(8, 12, 28, 0.98) 100%);
-  border-radius: 10px;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(22, 28, 56, 0.97) 0%, rgba(8, 12, 28, 0.98) 100%);
+  border-radius: 10px 10px 0 0;
   box-shadow:
     inset 0 1px 1px rgba(0,0,0,0.45),
-    inset 0 0 0 1px rgba(0,0,0,0.35);
+    inset 0 0 0 1px rgba(0,0,0,0.30);
   z-index: 1;
 }
 
+/* заголовок: build-color просвічує крізь напівтемний градієнт-овeрлей
+   (приглушуємо вирвиглазний колір), текст залишається яскравим */
 .bv-card-header {
   position: absolute;
   top: 0; left: 0; right: 0;
@@ -959,6 +959,7 @@ details[open] > .group-header::before { content: "▾"; }
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.42) 100%);
   font-size: 0.56rem;
   font-weight: 800;
   letter-spacing: 0.5px;
@@ -968,7 +969,7 @@ details[open] > .group-header::before { content: "▾"; }
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0 8px;
-  text-shadow: 0 1px 1px rgba(0,0,0,0.55);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.65);
   z-index: 5;
 }
 
@@ -977,38 +978,61 @@ details[open] > .group-header::before { content: "▾"; }
   top: 18px;
   left: 3px;
   right: 3px;
-  bottom: 3px;
-  display: flex;
-  flex-direction: row;
-  justify-content: flex-end;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   pointer-events: none;
-  border-radius: 10px;
-  overflow: hidden;
   z-index: 2;
+  overflow: hidden;
+  border-radius: 10px 10px 0 0;
 }
 .bv-stripe {
   position: relative;
-  width: 25%;
   height: 100%;
-  flex-shrink: 0;
+  transform: skewX(-10deg);
+  transform-origin: top right;
 }
-.bv-stripe--officer   { background: linear-gradient(180deg, #fde047 0%, #b45309 100%); }
-.bv-stripe--jungle    { background: linear-gradient(180deg, #4ade80 0%, #14532d 100%); }
-.bv-stripe--ninja     { background: linear-gradient(180deg, #a78bfa 0%, #4c1d95 100%); }
-.bv-stripe--gear-high { background: linear-gradient(180deg, #ff1493 0%, #7a0e44 100%); }
-.bv-stripe--gear-low  { background: linear-gradient(180deg, #64748b 0%, #1e293b 100%); }
+.bv-stripe--empty     { background: transparent; }
+.bv-stripe--officer   { background: linear-gradient(180deg, rgba(234,179,8,0.55)  0%, rgba(120,53,15,0.45)  100%); }
+.bv-stripe--jungle    { background: linear-gradient(180deg, rgba(34,197,94,0.55)  0%, rgba(20,83,45,0.45)   100%); }
+.bv-stripe--ninja     { background: linear-gradient(180deg, rgba(139,92,246,0.55) 0%, rgba(59,7,100,0.45)   100%); }
+.bv-stripe--gear-high { background: linear-gradient(180deg, rgba(219,39,119,0.55) 0%, rgba(80,7,36,0.45)    100%); }
+.bv-stripe--gear-low  { background: linear-gradient(180deg, rgba(100,116,139,0.55) 0%, rgba(15,23,42,0.50)  100%); }
+
+/* офіцерська полоса: великий приглушений зірковий watermark зверху,
+   символізує лідера; маленький 👑 лишається знизу */
+.bv-stripe--officer::before {
+  content: '★';
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%) skewX(10deg);
+  font-size: 1.25rem;
+  line-height: 1;
+  color: rgba(255, 240, 180, 0.22);
+  text-shadow: 0 0 6px rgba(255, 200, 0, 0.35);
+  pointer-events: none;
+  z-index: 0;
+}
 
 .bv-stripe-icon {
   position: absolute;
-  bottom: 4px;
+  bottom: 6px;
   left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.9rem;
+  transform: translateX(-50%) skewX(10deg);
+  font-size: 0.78rem;
   line-height: 1;
   color: #fff;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.9);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.95);
   pointer-events: none;
   white-space: nowrap;
+  z-index: 1;
+}
+.bv-stripe-icon--text {
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
 }
 
 .bv-card-name {
@@ -1041,7 +1065,9 @@ details[open] > .group-header::before { content: "▾"; }
 .bv-col--view .bv-card-header { font-size: 0.66rem; height: 22px; letter-spacing: 0.6px; }
 .bv-col--view .bv-card-panel  { top: 22px; }
 .bv-col--view .bv-card-stripes{ top: 22px; }
-.bv-col--view .bv-stripe-icon { font-size: 1.1rem; bottom: 6px; }
+.bv-col--view .bv-stripe-icon { font-size: 1rem; bottom: 8px; }
+.bv-col--view .bv-stripe-icon--text { font-size: 0.7rem; }
+.bv-col--view .bv-stripe--officer::before { font-size: 1.6rem; top: 6px; }
 
 .bv-row {
   display: flex;
