@@ -487,7 +487,7 @@ function presetBarBattle() {
   const canEdit = typeof fbIsAdmin === 'function' && fbIsAdmin();
   const sorted = Object.entries(battlePresets)
     .sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
-  const liveOpt = `<option value="__live__"${activeBattlePresetId === null ? ' selected' : ''}>Поточний</option>`;
+  const liveOpt = `<option value="__live__"${activeBattlePresetId === null ? ' selected' : ''}>— Виберіть пресет —</option>`;
   const opts = sorted.map(([id, p]) =>
     `<option value="${esc(id)}"${activeBattlePresetId === id ? ' selected' : ''}>${esc(p.name)}</option>`
   ).join('');
