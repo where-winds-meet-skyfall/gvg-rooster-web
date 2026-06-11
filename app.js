@@ -508,7 +508,7 @@ let editorSort = { field: 'name', dir: 'asc' };
 const EDITOR_COLUMNS = [
   { field: 'name',             label: "Ім'я",      sortable: true },
   { field: 'build',            label: 'GvG білд',  sortable: true },
-  { field: 'altBuild',         label: 'Альт',      sortable: true },
+  { field: 'altBuild',         label: 'Альт білд',      sortable: true },
   { field: 'device',           label: 'Пристрій',  sortable: true },
   { field: 'gearLevel',        label: 'Потужність', sortable: true },
   { field: 'prevSeasonMythic', label: 'Mythic',    sortable: true },
@@ -590,6 +590,7 @@ function viewEditor() {
 
   const toolbar = `<div class="editor-toolbar">
     <button class="btn-admin-action" data-action="editor-add">+ Додати гравця</button>
+    <button class="btn-admin-action" data-action="editor-export-excel">⤓ Експорт Excel</button>
     <button class="btn-admin-action" data-action="editor-export-csv">⤓ Експорт CSV</button>
     <span class="editor-count">${PLAYERS.length} гравців</span>
   </div>`;
@@ -668,39 +669,81 @@ async function editorDeleteRow(name) {
   }
 }
 
-// Експорт CSV з BOM — щоб Excel правильно читав кирилицю
-function editorExportCsv() {
-  const cols = [
+function editorExportColumns() {
+  return [
     ['name', "Ім'я"], ['build', 'Class'], ['altBuild', 'Alt'], ['mainRole', 'Main Role'],
     ['device', 'Device'], ['gearLevel', 'Gear'], ['arenaRank', 'Arena'],
     ['prevSeasonMythic', 'Prev Mythic'], ['mastery', 'Mastery'], ['ready', 'Ready'],
     ['squad', 'Squad'], ['note', 'Note'],
   ];
+}
+
+function editorExportValue(p, field) {
+  switch (field) {
+    case 'build':
+    case 'altBuild':         return p[field] ? (BUILDS[p[field]]?.label ?? p[field]) : '';
+    case 'gearLevel':        return GEAR_TIERS[p.gearLevel]?.label ?? p.gearLevel ?? '';
+    case 'prevSeasonMythic': return p.prevSeasonMythic ? 'Yes' : 'No';
+    case 'ready':            return p.ready ? 'Yes' : 'No';
+    case 'squad':            return p.squad === 'attack' ? 'Attack' : p.squad === 'def' ? 'Defence' : '';
+    case 'mastery':          return p.mastery ?? '';
+    default:                 return p[field] ?? '';
+  }
+}
+
+// Експорт CSV з BOM — щоб Excel правильно читав кирилицю
+function editorExportCsv() {
+  const cols = editorExportColumns();
   const cell = v => {
     const s = v == null ? '' : String(v);
     return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
   };
-  const fmt = (p, field) => {
-    switch (field) {
-      case 'build':
-      case 'altBuild':         return p[field] ? (BUILDS[p[field]]?.label ?? p[field]) : '';
-      case 'gearLevel':        return GEAR_TIERS[p.gearLevel]?.label ?? p.gearLevel ?? '';
-      case 'prevSeasonMythic': return p.prevSeasonMythic ? 'Yes' : 'No';
-      case 'ready':            return p.ready ? 'Yes' : 'No';
-      case 'squad':            return p.squad === 'attack' ? 'Attack' : p.squad === 'def' ? 'Defence' : '';
-      case 'mastery':          return p.mastery ?? '';
-      default:                 return p[field] ?? '';
-    }
-  };
   const BOM    = '﻿';
   const header = cols.map(c => cell(c[1])).join(',');
-  const lines  = editorSortedPlayers().map(p => cols.map(c => cell(fmt(p, c[0]))).join(','));
+  const lines  = editorSortedPlayers().map(p => cols.map(c => cell(editorExportValue(p, c[0]))).join(','));
   const csv    = BOM + [header, ...lines].join('\r\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
   a.href     = url;
   a.download = `gvg-roster-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function editorExportExcel() {
+  const cols = editorExportColumns();
+  const xlsCell = v => {
+    const s = v == null ? '' : String(v);
+    const safe = /^[=+\-@]/.test(s) ? "'" + s : s;
+    return esc(safe).replace(/\n/g, '<br>');
+  };
+  const header = cols.map(([, label]) => `<th>${xlsCell(label)}</th>`).join('');
+  const rows = editorSortedPlayers()
+    .map(p => `<tr>${cols.map(([field]) => `<td>${xlsCell(editorExportValue(p, field))}</td>`).join('')}</tr>`)
+    .join('');
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    table { border-collapse: collapse; font-family: Arial, sans-serif; font-size: 11pt; }
+    th, td { border: 1px solid #b7c4d6; padding: 6px 8px; mso-number-format:"\\@"; }
+    th { background: #dbeafe; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <table>
+    <thead><tr>${header}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+</body>
+</html>`;
+  const blob = new Blob(['\ufeff', html], { type: 'application/vnd.ms-excel;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `gvg-roster-${new Date().toISOString().slice(0, 10)}.xls`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -1604,6 +1647,7 @@ function initEvents() {
       return;
     }
     if (e.target.closest('[data-action="editor-add"]')) { editorAddPlayer(); return; }
+    if (e.target.closest('[data-action="editor-export-excel"]')) { editorExportExcel(); return; }
     if (e.target.closest('[data-action="editor-export-csv"]')) { editorExportCsv(); return; }
     const delBtn = e.target.closest('[data-action="editor-del"]');
     if (delBtn) { editorDeleteRow(delBtn.dataset.edName); return; }
