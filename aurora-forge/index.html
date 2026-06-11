@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<!--
+  Прихована точка входу в редактор ростера («Таблиця»).
+  Доступна лише за цим рутом: /aurora-forge/
+  Дзеркалить розмітку кореневого index.html, але через <base href="../">
+  підвантажує ті самі style.css / app.js / data.js з кореня (без дублювання логіки).
+  body[data-force-editor] вмикає viewMode 'editor' в app.js.
+  Якщо змінюєш структуру кореневого index.html — синхронізуй тут <body>.
+-->
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <base href="../">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ростер — Таблиця</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-force-editor="1">
+
+  <header class="site-header">
+    <h1 class="site-title">Skyfall GvG (<span id="player-count" class="player-count"></span>  гравця)</h1>
+    <button id="legend-toggle" class="btn-legend" aria-expanded="false" aria-controls="legend">
+      Легенда <span class="legend-arrow">▸</span>
+    </button>
+    <button id="add-player-btn" class="btn-add-player" style="display:none">+ Гравець</button>
+    <button id="auth-btn" class="btn-auth">🔐 Увійти</button>
+  </header>
+
+  <div id="legend" class="legend hidden"></div>
+
+  <div class="view-tabs" role="tablist" aria-label="Режим перегляду">
+    <button class="tab active" data-view="list"     role="tab" aria-selected="true">Гравці</button>
+    <button class="tab"        data-view="grouped"  role="tab" aria-selected="false">По білдах</button>
+    <button class="tab"        data-view="battle"   role="tab" aria-selected="false">Бойова пачка</button>
+    <button class="tab"        data-view="strategy" role="tab" aria-selected="false">Стратегія</button>
+  </div>
+
+  <details class="filters-panel">
+    <summary class="filters-summary">Фільтри</summary>
+    <div class="filters-body">
+
+      <div class="filter-row">
+        <input type="text" id="search" class="input-search"
+               placeholder="🔍  Пошук за іменем…" autocomplete="off" spellcheck="false">
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-label">🎯 Білд</span>
+        <div id="build-filters" class="pill-group"></div>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-label">🔀 Альт-білд</span>
+        <div id="alt-build-filters" class="pill-group"></div>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-label">⚡ Пачка</span>
+        <div id="squad-filters" class="pill-group"></div>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-label">🎭 Роль</span>
+        <div id="role-filters" class="pill-group"></div>
+      </div>
+
+      <div class="filter-row">
+        <span class="filter-label">⚙ Спорядж.</span>
+        <div id="gear-filters" class="pill-group"></div>
+      </div>
+
+      <div class="filter-row filter-row--inline filter-row--between">
+        <label class="toggle-label">
+          <input type="checkbox" id="ready-only" class="checkbox-ready">
+          Тільки готові
+        </label>
+        <div class="sort-controls">
+          <select id="sort-field" class="select-sort" aria-label="Сортування за полем">
+            <option value="name">За іменем</option>
+            <option value="gearLevel">За спорядженням</option>
+            <option value="build">За білдом</option>
+          </select>
+          <button id="sort-dir" class="btn-sort-dir" title="Напрямок сортування">↑</button>
+        </div>
+      </div>
+
+      <div class="filter-row filter-row--right">
+        <button id="reset-filters" class="btn-reset">↺ Скинути</button>
+      </div>
+
+    </div>
+  </details>
+
+  <div id="stats-bar" class="stats-bar hidden"></div>
+
+  <main id="roster" class="roster"></main>
+
+  <!-- Модальне вікно редагування гравця -->
+  <div id="player-modal" class="player-modal">
+    <div class="player-modal-box">
+      <div class="player-modal-header">
+        <h2 class="player-modal-title" id="player-modal-title">Гравець</h2>
+        <button type="button" id="player-modal-close" class="player-modal-close" aria-label="Закрити">✕</button>
+      </div>
+      <form id="player-form" autocomplete="off">
+        <div class="pm-row">
+          <label class="pm-label" for="pm-name">Ігрове ім'я</label>
+          <input id="pm-name" type="text" class="pm-input" required placeholder="PlayerName">
+        </div>
+        <div class="pm-grid2">
+          <div class="pm-row">
+            <label class="pm-label" for="pm-build">Основний білд</label>
+            <select id="pm-build" class="pm-select"></select>
+          </div>
+          <div class="pm-row">
+            <label class="pm-label" for="pm-altbuild">Альт-білд</label>
+            <select id="pm-altbuild" class="pm-select"></select>
+          </div>
+          <div class="pm-row">
+            <label class="pm-label" for="pm-gear">Спорядження</label>
+            <select id="pm-gear" class="pm-select">
+              <option value="low">Низький</option>
+              <option value="mid" selected>Середній</option>
+              <option value="high">Високий</option>
+            </select>
+          </div>
+          <div class="pm-row">
+            <label class="pm-label" for="pm-squad">Пачка</label>
+            <select id="pm-squad" class="pm-select">
+              <option value="">Нерозподілений</option>
+              <option value="attack">Attack</option>
+              <option value="def">Defence</option>
+            </select>
+          </div>
+        </div>
+        <div class="pm-row">
+          <label class="pm-label">Ролі</label>
+          <div class="pm-roles-group">
+            <label class="pm-check-label"><input type="checkbox" name="pm-role" value="Officer"> 👑 Officer</label>
+            <label class="pm-check-label"><input type="checkbox" name="pm-role" value="Jungle"> 🌿 Jungle</label>
+            <label class="pm-check-label"><input type="checkbox" name="pm-role" value="Ninja"> 🥷 Ninja</label>
+          </div>
+        </div>
+        <div class="pm-row pm-row--check">
+          <label class="pm-check-label">
+            <input type="checkbox" id="pm-ready" checked> Готовий до GvG 30×30
+          </label>
+        </div>
+        <div class="pm-row">
+          <label class="pm-label" for="pm-note">Тактична нотатка</label>
+          <input id="pm-note" type="text" class="pm-input" placeholder="фокус, фланг, особливості…">
+        </div>
+        <div id="pm-error" class="pm-error"></div>
+        <div class="pm-actions">
+          <button type="button" id="pm-delete" class="btn-pm-delete" style="display:none">🗑 Видалити</button>
+          <button type="submit" id="pm-submit" class="btn-pm-save">Зберегти</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Модальне вікно входу -->
+  <div id="login-modal" class="login-modal">
+    <div class="login-box">
+      <h2 class="login-title">Вхід в адмінку</h2>
+      <form id="login-form" autocomplete="on">
+        <div class="login-field">
+          <label class="login-label" for="login-username">Логін</label>
+          <input id="login-username" class="login-input" type="text"
+                 name="username" autocomplete="username"
+                 placeholder="Skyfall" required>
+        </div>
+        <div class="login-field">
+          <label class="login-label" for="login-password">Пароль</label>
+          <input id="login-password" class="login-input" type="password"
+                 name="password" autocomplete="current-password"
+                 placeholder="••••••••" required>
+        </div>
+        <div id="login-error" class="login-error"></div>
+        <button type="submit" class="btn-login-submit">Увійти</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <script src="html2canvas.min.js"></script>
+  <script src="mapdata.js"></script>
+  <script src="data.js"></script>
+  <script src="firebase.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

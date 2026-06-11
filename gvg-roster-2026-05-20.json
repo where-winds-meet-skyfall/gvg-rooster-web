@@ -1,0 +1,356 @@
+[
+  {
+    "name": "AUrory",
+    "build": "umbrella_dd",
+    "altBuild": null,
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "def",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "Aiswill",
+    "build": "heal",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "ArthurPencilgun",
+    "build": "duals",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "BayarD",
+    "build": "strategic",
+    "altBuild": null,
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "attack",
+    "roles": [],
+    "note": "може замінити спис на стяжку"
+  },
+  {
+    "name": "BlindMary",
+    "build": "strategic",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "CantBeTouched",
+    "build": "katana",
+    "altBuild": null,
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "attack",
+    "roles": [
+      "Officer"
+    ],
+    "note": ""
+  },
+  {
+    "name": "Chifusama",
+    "build": "katana",
+    "altBuild": null,
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "def",
+    "roles": [
+      "Officer"
+    ],
+    "note": ""
+  },
+  {
+    "name": "Creckadrenalin",
+    "build": "katana",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": null,
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "CyMþak",
+    "build": "strategic",
+    "altBuild": "nameless",
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [
+      "Jungle"
+    ],
+    "note": ""
+  },
+  {
+    "name": "DzirT",
+    "build": "nameless",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "attack",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "EnEr",
+    "build": "umbrella_dd_aoe",
+    "altBuild": null,
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "attack",
+    "roles": [
+      "Jungle"
+    ],
+    "note": ""
+  },
+  {
+    "name": "Endurist",
+    "build": "nameless",
+    "altBuild": null,
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "attack",
+    "roles": [
+      "Jungle"
+    ],
+    "note": ""
+  },
+  {
+    "name": "Espeir",
+    "build": "nameless",
+    "altBuild": null,
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "def",
+    "roles": [
+      "Jungle"
+    ],
+    "note": ""
+  },
+  {
+    "name": "Geerion",
+    "build": "nameless",
+    "altBuild": "umbrella_dd",
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "attack",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "Jianggi",
+    "build": "heal",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "attack",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "Kelevra",
+    "build": "nameless",
+    "altBuild": null,
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "attack",
+    "roles": [
+      "Officer"
+    ],
+    "note": ""
+  },
+  {
+    "name": "Kirito_AL",
+    "build": "umbrella_dd_aoe",
+    "altBuild": "katana",
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "LELUSH",
+    "build": "tank",
+    "altBuild": "umbrella_dd",
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [
+      "Officer"
+    ],
+    "note": "гібрид: Mo Blade + Inkwell Fan; чистий танк"
+  },
+  {
+    "name": "LuminarA",
+    "build": "heal",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "LuoJue-Lin",
+    "build": "tank",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "attack",
+    "roles": [],
+    "note": "фулл танк"
+  },
+  {
+    "name": "LuthiXia",
+    "build": "heal",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "attack",
+    "roles": [
+      "Officer"
+    ],
+    "note": ""
+  },
+  {
+    "name": "MariSkywalker",
+    "build": "katana",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "MasterFoobar",
+    "build": "tank",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [],
+    "note": "чистий танк"
+  },
+  {
+    "name": "Nanaaaaami",
+    "build": "heal",
+    "altBuild": null,
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "def",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "Nixmoonky",
+    "build": "heal",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "attack",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "OldRock",
+    "build": "tank",
+    "altBuild": "umbrella_dd",
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "attack",
+    "roles": [
+      "Officer"
+    ],
+    "note": ""
+  },
+  {
+    "name": "PonIka",
+    "build": "nameless",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [
+      "Jungle"
+    ],
+    "note": ""
+  },
+  {
+    "name": "QiShye",
+    "build": "nameless",
+    "altBuild": "heal",
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "def",
+    "roles": [
+      "Jungle"
+    ],
+    "note": ""
+  },
+  {
+    "name": "StanislavZal",
+    "build": "duals",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "attack",
+    "roles": [],
+    "note": "Гібрід: дуали + мо блейд(стяжка)"
+  },
+  {
+    "name": "SunRise",
+    "build": "nameless",
+    "altBuild": null,
+    "gearLevel": "high",
+    "ready": true,
+    "squad": "attack",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "arhangels",
+    "build": "heal",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "attack",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "datsann",
+    "build": "nameless",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "attack",
+    "roles": [],
+    "note": ""
+  },
+  {
+    "name": "lHanLil",
+    "build": "nameless",
+    "altBuild": null,
+    "gearLevel": "mid",
+    "ready": true,
+    "squad": "def",
+    "roles": [],
+    "note": ""
+  }
+]

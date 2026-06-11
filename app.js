@@ -13,7 +13,7 @@ const GEAR_TIERS = {
 };
 
 const state = {
-  viewMode: 'list', // 'list' | 'grouped' | 'battle'
+  viewMode: 'list', // 'list' | 'grouped' | 'battle' | 'strategy' | 'editor'
   filters: {
     builds:    new Set(), // обрані ключі основного білда
     altBuilds: new Set(), // обрані ключі альт-білда
@@ -39,6 +39,11 @@ function playersToFirebaseMap(list) {
       squad:     p.squad ?? null,
       roles:     Array.isArray(p.roles) ? p.roles : [],
       note:      p.note || '',
+      device:           p.device || '',
+      mainRole:         p.mainRole || '',
+      arenaRank:        p.arenaRank || '',
+      prevSeasonMythic: !!p.prevSeasonMythic,
+      mastery:          p.mastery ?? null,
     };
   });
   return map;
@@ -58,6 +63,11 @@ function applyFirebasePlayers(data) {
       squad:     p.squad     ?? null,
       roles:     Array.isArray(p.roles) ? p.roles : [],
       note:      p.note      || '',
+      device:           p.device   || '',
+      mainRole:         p.mainRole || '',
+      arenaRank:        p.arenaRank || '',
+      prevSeasonMythic: !!p.prevSeasonMythic,
+      mastery:          p.mastery ?? null,
     });
   });
 }
@@ -378,10 +388,13 @@ function playerCard(p) {
 
 /* ─── Export / Import ───────────────────────────────────────────────────── */
 function exportPlayers() {
-  const data = PLAYERS.map(({ name, build, altBuild, gearLevel, ready, squad, roles, note }) => ({
+  const data = PLAYERS.map(({ name, build, altBuild, gearLevel, ready, squad, roles, note,
+                             device, mainRole, arenaRank, prevSeasonMythic, mastery }) => ({
     name, build, altBuild: altBuild ?? null, gearLevel,
     ready: !!ready, squad: squad ?? null,
     roles: roles || [], note: note || '',
+    device: device || '', mainRole: mainRole || '', arenaRank: arenaRank || '',
+    prevSeasonMythic: !!prevSeasonMythic, mastery: mastery ?? null,
   }));
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
@@ -424,6 +437,11 @@ async function importPlayers(file) {
       squad:     p.squad     ?? null,
       roles:     Array.isArray(p.roles) ? p.roles : [],
       note:      p.note      || '',
+      device:           p.device   || '',
+      mainRole:         p.mainRole || '',
+      arenaRank:        p.arenaRank || '',
+      prevSeasonMythic: !!p.prevSeasonMythic,
+      mastery:          p.mastery ?? null,
     };
   });
   try {
@@ -480,6 +498,221 @@ function viewGrouped(players) {
   return sections.length
     ? sections.join('\n')
     : '<p class="empty">Немає гравців.</p>';
+}
+
+/* ─── Editor (Excel-подібна таблиця) ────────────────────────────────────── */
+let editorSort = { field: 'name', dir: 'asc' };
+
+// Колонки редактора: field — ключ гравця, sortable — чи клікабельний заголовок
+const EDITOR_COLUMNS = [
+  { field: 'name',             label: "Ім'я",      sortable: true },
+  { field: 'build',            label: 'Клас',      sortable: true },
+  { field: 'altBuild',         label: 'Альт',      sortable: true },
+  { field: 'mainRole',         label: 'Гол. клас', sortable: true },
+  { field: 'device',           label: 'Пристрій',  sortable: true },
+  { field: 'gearLevel',        label: 'Споряд.',   sortable: true },
+  { field: 'arenaRank',        label: 'Арена',     sortable: true },
+  { field: 'prevSeasonMythic', label: 'Mythic',    sortable: true },
+  { field: 'mastery',          label: 'Майст.',    sortable: true },
+  { field: 'ready',            label: 'Готов.',    sortable: true },
+  { field: 'squad',            label: 'Пачка',     sortable: true },
+  { field: 'note',             label: 'Нотатка',   sortable: false },
+];
+
+// Значення для сортування: повертає число або рядок залежно від поля
+function editorSortValue(p, field) {
+  switch (field) {
+    case 'build':
+    case 'altBuild': return (BUILDS[p[field]]?.label ?? '').toLowerCase();
+    case 'gearLevel': return Object.keys(GEAR_TIERS).indexOf(p.gearLevel);
+    case 'arenaRank': return ARENA_RANKS.indexOf(p.arenaRank);
+    case 'mastery':   return p.mastery ?? -1;
+    case 'prevSeasonMythic':
+    case 'ready':     return p[field] ? 1 : 0;
+    default:          return (p[field] ?? '').toString().toLowerCase();
+  }
+}
+
+function editorSortedPlayers() {
+  const { field, dir } = editorSort;
+  const mult = dir === 'asc' ? 1 : -1;
+  return [...PLAYERS].sort((a, b) => {
+    const va = editorSortValue(a, field), vb = editorSortValue(b, field);
+    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * mult;
+    return String(va).localeCompare(String(vb), 'uk') * mult;
+  });
+}
+
+function edSelect(name, field, value, options) {
+  const cur = value ?? '';
+  const opts = options.map(o => {
+    const val = typeof o === 'object' ? o.value : o;
+    const lab = typeof o === 'object' ? o.label : o;
+    return `<option value="${esc(val)}"${val === cur ? ' selected' : ''}>${esc(lab || '—')}</option>`;
+  }).join('');
+  return `<select class="ed-input" data-ed-name="${esc(name)}" data-ed-field="${field}">${opts}</select>`;
+}
+
+function viewEditor() {
+  const isAdmin = typeof fbIsAdmin === 'function' && fbIsAdmin();
+  if (!isAdmin) {
+    return '<p class="empty">Редактор доступний лише адміну. Увійдіть, щоб редагувати ростер.</p>';
+  }
+
+  const seedBar = !_playersInFirebase
+    ? `<div class="editor-seedbar">
+        <span>Дані ще не залиті у Firebase — джерело поки data.js.</span>
+        <button class="btn-admin-action" data-action="editor-seed">⬆ Залити у Firebase</button>
+      </div>`
+    : '';
+
+  const buildOpts     = Object.entries(BUILDS).map(([k, b]) => ({ value: k, label: b.label }));
+  const buildOptsOpt  = [{ value: '', label: '—' }, ...buildOpts];
+  const gearOpts      = Object.entries(GEAR_TIERS).map(([k, t]) => ({ value: k, label: t.label }));
+  const squadOpts     = [{ value: '', label: '—' }, { value: 'attack', label: 'Attack' }, { value: 'def', label: 'Defence' }];
+  const mainRoleOpts  = [{ value: '', label: '—' }, ...MAIN_ROLES.map(r => ({ value: r, label: r }))];
+  const deviceOpts    = [{ value: '', label: '—' }, ...DEVICE_OPTIONS.map(d => ({ value: d, label: d }))];
+  const arenaOpts     = [{ value: '', label: '—' }, ...ARENA_RANKS.map(a => ({ value: a, label: a }))];
+
+  const rows = editorSortedPlayers()
+    .map(p => `<tr>
+      <td class="ed-name"><input class="ed-input ed-input--name" value="${esc(p.name)}" data-ed-name="${esc(p.name)}" data-ed-field="name"></td>
+      <td>${edSelect(p.name, 'build', p.build, buildOpts)}</td>
+      <td>${edSelect(p.name, 'altBuild', p.altBuild, buildOptsOpt)}</td>
+      <td>${edSelect(p.name, 'mainRole', p.mainRole, mainRoleOpts)}</td>
+      <td>${edSelect(p.name, 'device', p.device, deviceOpts)}</td>
+      <td>${edSelect(p.name, 'gearLevel', p.gearLevel, gearOpts)}</td>
+      <td>${edSelect(p.name, 'arenaRank', p.arenaRank, arenaOpts)}</td>
+      <td class="ed-center"><input type="checkbox" data-ed-name="${esc(p.name)}" data-ed-field="prevSeasonMythic"${p.prevSeasonMythic ? ' checked' : ''}></td>
+      <td><input class="ed-input ed-input--num" type="number" value="${p.mastery ?? ''}" data-ed-name="${esc(p.name)}" data-ed-field="mastery"></td>
+      <td class="ed-center"><input type="checkbox" data-ed-name="${esc(p.name)}" data-ed-field="ready"${p.ready ? ' checked' : ''}></td>
+      <td>${edSelect(p.name, 'squad', p.squad, squadOpts)}</td>
+      <td><input class="ed-input" value="${esc(p.note || '')}" data-ed-name="${esc(p.name)}" data-ed-field="note"></td>
+      <td class="ed-center"><button class="ed-del" data-action="editor-del" data-ed-name="${esc(p.name)}" title="Видалити гравця">✕</button></td>
+    </tr>`).join('');
+
+  const headCells = EDITOR_COLUMNS.map(c => {
+    if (!c.sortable) return `<th>${esc(c.label)}</th>`;
+    const active = editorSort.field === c.field;
+    const arrow = active ? (editorSort.dir === 'asc' ? ' ↑' : ' ↓') : '';
+    return `<th class="ed-th-sort${active ? ' is-sorted' : ''}" data-ed-sort="${c.field}">${esc(c.label)}${arrow}</th>`;
+  }).join('') + '<th></th>';
+
+  const toolbar = `<div class="editor-toolbar">
+    <button class="btn-admin-action" data-action="editor-add">+ Додати гравця</button>
+    <button class="btn-admin-action" data-action="editor-export-csv">⤓ Експорт CSV</button>
+    <span class="editor-count">${PLAYERS.length} гравців</span>
+  </div>`;
+
+  return seedBar + toolbar + `<div class="editor-wrap"><table class="editor-table">
+    <thead><tr>${headCells}</tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
+async function editorWriteField(name, field, rawValue) {
+  if (!fbIsAdmin()) return;
+  const p = PLAYERS.find(x => x.name === name);
+  if (!p) return;
+  let value = rawValue;
+  if (field === 'prevSeasonMythic' || field === 'ready') value = !!rawValue;
+  else if (field === 'mastery')                          value = rawValue === '' ? null : Number(rawValue);
+  else if (field === 'altBuild' || field === 'squad')    value = rawValue || null;
+  p[field] = value; // оптимістичне локальне оновлення
+  try {
+    if (_playersInFirebase) await fbSavePlayerField(name, field, value);
+    else                    await fbSaveAllPlayers(playersToFirebaseMap(PLAYERS));
+  } catch (err) {
+    alert('Не вдалося зберегти: ' + (err?.message ?? err));
+  }
+}
+
+async function editorRename(oldName, newName) {
+  newName = newName.trim();
+  if (!newName || newName === oldName) { render(); return; }
+  if (PLAYERS.some(x => x.name === newName)) {
+    alert('Гравець з таким іменем уже існує');
+    render();
+    return;
+  }
+  const p = PLAYERS.find(x => x.name === oldName);
+  if (!p) return;
+  p.name = newName;
+  const data = playersToFirebaseMap([p])[newName];
+  try {
+    await savePlayerData(newName, data, oldName);
+  } catch (err) {
+    alert('Не вдалося перейменувати: ' + (err?.message ?? err));
+  }
+}
+
+async function editorAddPlayer() {
+  if (!fbIsAdmin()) return;
+  const name = (prompt("Ім'я нового гравця:") || '').trim();
+  if (!name) return;
+  if (PLAYERS.some(x => x.name === name)) { alert('Гравець з таким іменем уже існує'); return; }
+  const p = {
+    name, build: Object.keys(BUILDS)[0], altBuild: null, gearLevel: 'mid',
+    ready: false, squad: null, roles: [], note: '',
+    device: '', mainRole: '', arenaRank: '', prevSeasonMythic: false, mastery: null,
+  };
+  PLAYERS.push(p);
+  render();
+  try {
+    await savePlayerData(name, playersToFirebaseMap([p])[name]);
+  } catch (err) {
+    alert('Не вдалося додати: ' + (err?.message ?? err));
+  }
+}
+
+async function editorDeleteRow(name) {
+  if (!fbIsAdmin()) return;
+  if (!confirm(`Видалити гравця «${name}»?`)) return;
+  const i = PLAYERS.findIndex(x => x.name === name);
+  if (i !== -1) PLAYERS.splice(i, 1);
+  render();
+  try {
+    await deletePlayerData(name);
+  } catch (err) {
+    alert('Не вдалося видалити: ' + (err?.message ?? err));
+  }
+}
+
+// Експорт CSV з BOM — щоб Excel правильно читав кирилицю
+function editorExportCsv() {
+  const cols = [
+    ['name', "Ім'я"], ['build', 'Class'], ['altBuild', 'Alt'], ['mainRole', 'Main Role'],
+    ['device', 'Device'], ['gearLevel', 'Gear'], ['arenaRank', 'Arena'],
+    ['prevSeasonMythic', 'Prev Mythic'], ['mastery', 'Mastery'], ['ready', 'Ready'],
+    ['squad', 'Squad'], ['note', 'Note'],
+  ];
+  const cell = v => {
+    const s = v == null ? '' : String(v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const fmt = (p, field) => {
+    switch (field) {
+      case 'build':
+      case 'altBuild':         return p[field] ? (BUILDS[p[field]]?.label ?? p[field]) : '';
+      case 'gearLevel':        return GEAR_TIERS[p.gearLevel]?.label ?? p.gearLevel ?? '';
+      case 'prevSeasonMythic': return p.prevSeasonMythic ? 'Yes' : 'No';
+      case 'ready':            return p.ready ? 'Yes' : 'No';
+      case 'squad':            return p.squad === 'attack' ? 'Attack' : p.squad === 'def' ? 'Defence' : '';
+      case 'mastery':          return p.mastery ?? '';
+      default:                 return p[field] ?? '';
+    }
+  };
+  const BOM    = '﻿';
+  const header = cols.map(c => cell(c[1])).join(',');
+  const lines  = editorSortedPlayers().map(p => cols.map(c => cell(fmt(p, c[0]))).join(','));
+  const csv    = BOM + [header, ...lines].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `gvg-roster-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /* ─── Preset Bars ───────────────────────────────────────────────────────── */
@@ -1077,6 +1310,7 @@ function render() {
     case 'grouped':  $roster.innerHTML = viewGrouped(sorted); break;
     case 'battle':   $roster.innerHTML = viewBattle();        break;
     case 'strategy': $roster.innerHTML = viewStrategy(); initStrategyCanvas(); break;
+    case 'editor':   $roster.innerHTML = viewEditor();       break;
     default:         $roster.innerHTML = viewList(sorted);
   }
 }
@@ -1245,6 +1479,8 @@ function initPlayerModal() {
     }
 
     const roles = [...form.querySelectorAll('input[name="pm-role"]:checked')].map(cb => cb.value);
+    // поля з Excel-редактора не керуються цією формою — переносимо їх із наявного гравця, щоб .set() їх не стер
+    const existing = PLAYERS.find(p => p.name === originalName) || {};
     const data = {
       build:     document.getElementById('pm-build').value,
       altBuild:  document.getElementById('pm-altbuild').value || null,
@@ -1253,6 +1489,11 @@ function initPlayerModal() {
       squad:     document.getElementById('pm-squad').value || null,
       roles,
       note:      document.getElementById('pm-note').value.trim(),
+      device:           existing.device   || '',
+      mainRole:         existing.mainRole || '',
+      arenaRank:        existing.arenaRank || '',
+      prevSeasonMythic: !!existing.prevSeasonMythic,
+      mastery:          existing.mastery ?? null,
     };
 
     submitBtn.disabled    = true;
@@ -1367,6 +1608,23 @@ function initEvents() {
       if (player) showPlayerModal(player);
       return;
     }
+    if (e.target.closest('[data-action="editor-seed"]')) {
+      fbSaveAllPlayers(playersToFirebaseMap(PLAYERS))
+        .catch(err => alert('Не вдалося залити: ' + (err?.message ?? err)));
+      return;
+    }
+    if (e.target.closest('[data-action="editor-add"]')) { editorAddPlayer(); return; }
+    if (e.target.closest('[data-action="editor-export-csv"]')) { editorExportCsv(); return; }
+    const delBtn = e.target.closest('[data-action="editor-del"]');
+    if (delBtn) { editorDeleteRow(delBtn.dataset.edName); return; }
+    const sortTh = e.target.closest('[data-ed-sort]');
+    if (sortTh) {
+      const f = sortTh.dataset.edSort;
+      if (editorSort.field === f) editorSort.dir = editorSort.dir === 'asc' ? 'desc' : 'asc';
+      else editorSort = { field: f, dir: 'asc' };
+      render();
+      return;
+    }
   });
 
   $roster.addEventListener('change', e => {
@@ -1374,6 +1632,14 @@ function initEvents() {
     if (fileInput && fileInput.files[0]) {
       importPlayers(fileInput.files[0]);
       fileInput.value = ''; // дозволяє повторний вибір того ж файлу
+      return;
+    }
+    // Редактор: запис зміненої комірки
+    const ed = e.target.closest('[data-ed-field]');
+    if (ed) {
+      const { edName: name, edField: field } = ed.dataset;
+      if (field === 'name') editorRename(name, ed.value);
+      else editorWriteField(name, field, ed.type === 'checkbox' ? ed.checked : ed.value);
     }
   });
 
@@ -1700,6 +1966,16 @@ document.addEventListener('DOMContentLoaded', () => {
   initGearPills();
   initEvents();
   initPlayerModal();
+
+  // Редактор «Таблиця» доступний лише зі своєї прихованої сторінки (папка-рут),
+  // яка ставить body[data-force-editor]. Жодна вкладка тоді не активна.
+  if (document.body.dataset.forceEditor) {
+    state.viewMode = 'editor';
+    document.querySelectorAll('.tab').forEach(t => {
+      t.classList.remove('active');
+      t.setAttribute('aria-selected', 'false');
+    });
+  }
   render();
 
   // Слухаємо Firebase — оновлюємо стан для всіх підключених користувачів

@@ -129,6 +129,12 @@ function fbSaveAllPlayers(map) {
   return fbDb.ref('players').set(map);
 }
 
+// Точковий запис одного поля — щоб двоє редакторів не затирали одне одного
+function fbSavePlayerField(name, field, value) {
+  if (!fbIsAdmin()) return Promise.reject('not admin');
+  return fbDb.ref(`players/${name}/${field}`).set(value);
+}
+
 /* ─── Login modal ───────────────────────────────────────────────────────── */
 function fbOpenLoginModal() {
   const modal = document.getElementById('login-modal');

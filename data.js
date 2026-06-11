@@ -76,6 +76,18 @@ const BUILDS = {
 };
 
 /**
+ * ДОВІДНИКИ ПОЛІВ РОСТЕРА
+ * Значення dropdown-ів у редакторі (вкладка-таблиця).
+ * Єдине місце правди — і редактор, і рендер беруть звідси.
+ */
+const DEVICE_OPTIONS = ['PC/Note', 'Console', 'Tablet', 'Mobile', 'PC/Note/Mobile', 'PC/Tablet'];
+
+// Окремий від BUILDS список: «головний» клас гравця в грі (вкл. Fist, якого в BUILDS немає)
+const MAIN_ROLES = ['Nameless', 'Heal', 'Strategic', 'Tank', 'Katana', 'Duals', 'Umbrella', 'Umbrella AOE', 'Fist'];
+
+const ARENA_RANKS = ['0-1000', '1001-2000', '2001-3000', 'Mythic'];
+
+/**
  * СПИСОК ГРАВЦІВ ГІЛЬДІЇ
  * Поля:
  *   name      — ігрове ім'я
@@ -84,8 +96,13 @@ const BUILDS = {
  *   gearLevel — рівень спорядження: "low" | "mid" | "high"
  *   ready     — готовий до бою 30×30 (true / false)
  *   squad     — пачка: "attack" | "def" | null (нерозподілений)
- *   roles     — масив додаткових ролей: [] | ["officer"] | ["Jungle"] | ["ninja"] тощо
+ *   roles     — масив гільдейних ролей: [] | ["Officer"] | ["Jungle"] | ["Ninja"] тощо
  *   note      — тактична нотатка ("фокус", фланг, захист точки тощо), або ""
+ *   device    — пристрій гри (з DEVICE_OPTIONS), або ""
+ *   mainRole  — головний клас у грі (з MAIN_ROLES), або ""
+ *   arenaRank — ранг арени (з ARENA_RANKS), або ""
+ *   prevSeasonMythic — чи був Mythic минулого сезону (true / false)
+ *   mastery   — числове значення майстерності, або null
  *
  * Приклад:
  *   { name: "Tankmaster", build: "tank",   altBuild: null,      gearLevel: "mid", ready: true,  squad: "def",    roles: ["officer"], note: "фокус" },
