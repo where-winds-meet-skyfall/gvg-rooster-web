@@ -87,7 +87,7 @@ function syncSquadsFromSlots() {
 }
 
 async function savePlayerData(name, data, originalName) {
-  if (!fbIsAdmin()) return;
+  if (!fbIsAuthed()) return;
   if (_playersInFirebase) {
     if (originalName && originalName !== name) {
       await fbDeletePlayer(originalName);
@@ -102,7 +102,7 @@ async function savePlayerData(name, data, originalName) {
 }
 
 async function deletePlayerData(name) {
-  if (!fbIsAdmin()) return;
+  if (!fbIsAuthed()) return;
   if (_playersInFirebase) {
     await fbDeletePlayer(name);
   } else {
@@ -554,11 +554,8 @@ function edSelect(name, field, value, options) {
 }
 
 function viewEditor() {
-  const isAdmin = typeof fbIsAdmin === 'function' && fbIsAdmin();
-  if (!isAdmin) {
-    return '<p class="empty">Редактор доступний лише адміну. Увійдіть, щоб редагувати ростер.</p>';
-  }
-
+  // Редактор відкривається лише за прихованим рутом /aurora-forge/ — доступ = знання URL.
+  // Запис іде під анонімним входом (fbSignInAnon), окремий логін не потрібен.
   const seedBar = !_playersInFirebase
     ? `<div class="editor-seedbar">
         <span>Дані ще не залиті у Firebase — джерело поки data.js.</span>
@@ -611,7 +608,7 @@ function viewEditor() {
 }
 
 async function editorWriteField(name, field, rawValue) {
-  if (!fbIsAdmin()) return;
+  if (!fbIsAuthed()) return;
   const p = PLAYERS.find(x => x.name === name);
   if (!p) return;
   let value = rawValue;
@@ -647,7 +644,7 @@ async function editorRename(oldName, newName) {
 }
 
 async function editorAddPlayer() {
-  if (!fbIsAdmin()) return;
+  if (!fbIsAuthed()) return;
   const name = (prompt("Ім'я нового гравця:") || '').trim();
   if (!name) return;
   if (PLAYERS.some(x => x.name === name)) { alert('Гравець з таким іменем уже існує'); return; }
@@ -666,7 +663,7 @@ async function editorAddPlayer() {
 }
 
 async function editorDeleteRow(name) {
-  if (!fbIsAdmin()) return;
+  if (!fbIsAuthed()) return;
   if (!confirm(`Видалити гравця «${name}»?`)) return;
   const i = PLAYERS.findIndex(x => x.name === name);
   if (i !== -1) PLAYERS.splice(i, 1);
@@ -1975,6 +1972,11 @@ document.addEventListener('DOMContentLoaded', () => {
       t.classList.remove('active');
       t.setAttribute('aria-selected', 'false');
     });
+    // Анонімний вхід — щоб запис у Firebase працював без логіна (доступ = знання URL).
+    // Після входу onAuthStateChanged викличе render() повторно.
+    if (typeof fbSignInAnon === 'function') {
+      fbSignInAnon().catch(err => console.error('anon sign-in failed:', err));
+    }
   }
   render();
 

@@ -20,7 +20,16 @@ const FB_EMAIL_SUFFIX = '@gvg-roster.app';
 
 let _fbCurrentUser = null;
 
-function fbIsAdmin()  { return _fbCurrentUser !== null; }
+// «Адмін» = справжній вхід по email/паролю. Анонімний (для редактора) — НЕ адмін.
+function fbIsAdmin()  { return _fbCurrentUser !== null && !_fbCurrentUser.isAnonymous; }
+// Будь-який автентифікований клієнт (вкл. анонімного) — має право писати в players/
+function fbIsAuthed() { return _fbCurrentUser !== null; }
+
+// Анонімний вхід — щоб сторінка редактора писала без логіна (правило .write: auth != null)
+function fbSignInAnon() {
+  if (fbAuth.currentUser) return Promise.resolve();
+  return fbAuth.signInAnonymously();
+}
 
 function fbSignIn(username, password) {
   const email = username.toLowerCase().trim() + FB_EMAIL_SUFFIX;
@@ -37,7 +46,7 @@ function fbGetDisplayName() {
 function fbUpdateAuthUI() {
   const btn = document.getElementById('auth-btn');
   if (!btn) return;
-  if (_fbCurrentUser) {
+  if (fbIsAdmin()) {
     const name = fbGetDisplayName();
     btn.innerHTML = `${name} · <span class="auth-signout">Вийти</span>`;
     btn.onclick = fbSignOut;
@@ -115,23 +124,23 @@ function fbListenPlayers(cb) {
 }
 
 function fbSavePlayer(name, data) {
-  if (!fbIsAdmin()) return Promise.reject('not admin');
+  if (!fbIsAuthed()) return Promise.reject('not authed');
   return fbDb.ref(`players/${name}`).set(data);
 }
 
 function fbDeletePlayer(name) {
-  if (!fbIsAdmin()) return Promise.reject('not admin');
+  if (!fbIsAuthed()) return Promise.reject('not authed');
   return fbDb.ref(`players/${name}`).remove();
 }
 
 function fbSaveAllPlayers(map) {
-  if (!fbIsAdmin()) return Promise.reject('not admin');
+  if (!fbIsAuthed()) return Promise.reject('not authed');
   return fbDb.ref('players').set(map);
 }
 
 // Точковий запис одного поля — щоб двоє редакторів не затирали одне одного
 function fbSavePlayerField(name, field, value) {
-  if (!fbIsAdmin()) return Promise.reject('not admin');
+  if (!fbIsAuthed()) return Promise.reject('not authed');
   return fbDb.ref(`players/${name}/${field}`).set(value);
 }
 
