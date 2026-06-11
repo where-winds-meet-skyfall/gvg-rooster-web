@@ -512,7 +512,7 @@ const EDITOR_COLUMNS = [
   { field: 'device',           label: 'Пристрій',  sortable: true },
   { field: 'gearLevel',        label: 'Потужність', sortable: true },
   { field: 'prevSeasonMythic', label: 'Mythic',    sortable: true },
-  { field: 'ready',            label: 'Готов',    sortable: true },
+  { field: 'ready',            label: 'Активний',    sortable: true },
   { field: 'squad',            label: 'Пачка',     sortable: true },
   { field: 'note',             label: 'Нотатка',   sortable: false },
 ];
@@ -980,6 +980,8 @@ const sv = {
   ctx:            null,
 };
 
+const STRATEGY_MARK_SCALE = 1.5;
+
 function svGetPos(e) {
   const rect  = sv.canvas.getBoundingClientRect();
   const scaleX = sv.canvas.width  / rect.width;
@@ -1000,16 +1002,16 @@ function svDrawArrow(ctx, x1, y1, x2, y2, color, alpha, dashed) {
   const dx = x2 - x1, dy = y2 - y1;
   if (Math.sqrt(dx * dx + dy * dy) < 6) return;
   const angle   = Math.atan2(dy, dx);
-  const headLen = 18;
+  const headLen = 18 * STRATEGY_MARK_SCALE;
   ctx.save();
   ctx.globalAlpha  = alpha;
   ctx.strokeStyle  = color;
   ctx.fillStyle    = color;
-  ctx.lineWidth    = 4;
+  ctx.lineWidth    = 4 * STRATEGY_MARK_SCALE;
   ctx.lineCap      = dashed ? 'butt' : 'round';
   ctx.shadowColor  = color;
-  ctx.shadowBlur   = 8;
-  if (dashed) ctx.setLineDash([12, 8]);
+  ctx.shadowBlur   = 8 * STRATEGY_MARK_SCALE;
+  if (dashed) ctx.setLineDash([12 * STRATEGY_MARK_SCALE, 8 * STRATEGY_MARK_SCALE]);
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2 - headLen * 0.65 * Math.cos(angle), y2 - headLen * 0.65 * Math.sin(angle));
@@ -1028,10 +1030,10 @@ function svDrawPlayer(ctx, x, y, name, color, build) {
   const b         = getBuild(build);
   const emoji     = b ? b.label.split(' ')[0] : '';
   const short     = name.length > 10 ? name.slice(0, 9) + '…' : name;
-  const fSize     = 11;
-  const padX      = 7, padY = 4;
-  const radius    = 4;
-  const emojiGap  = 3;
+  const fSize     = 11 * STRATEGY_MARK_SCALE;
+  const padX      = 7 * STRATEGY_MARK_SCALE, padY = 4 * STRATEGY_MARK_SCALE;
+  const radius    = 4 * STRATEGY_MARK_SCALE;
+  const emojiGap  = 3 * STRATEGY_MARK_SCALE;
   ctx.save();
 
   // Measure emoji width
@@ -1049,7 +1051,7 @@ function svDrawPlayer(ctx, x, y, name, color, build) {
 
   // shadow + fill
   ctx.shadowColor = color;
-  ctx.shadowBlur  = 7;
+  ctx.shadowBlur  = 7 * STRATEGY_MARK_SCALE;
   ctx.fillStyle   = color;
   ctx.globalAlpha = 0.92;
   ctx.beginPath();
@@ -1060,7 +1062,7 @@ function svDrawPlayer(ctx, x, y, name, color, build) {
   ctx.globalAlpha = 1;
   ctx.shadowBlur  = 0;
   ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-  ctx.lineWidth   = 1.2;
+  ctx.lineWidth   = 1.2 * STRATEGY_MARK_SCALE;
   ctx.stroke();
 
   // emoji icon
@@ -1070,7 +1072,7 @@ function svDrawPlayer(ctx, x, y, name, color, build) {
     ctx.textAlign    = 'left';
     ctx.textBaseline = 'middle';
     ctx.shadowColor  = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur   = 2;
+    ctx.shadowBlur   = 2 * STRATEGY_MARK_SCALE;
     ctx.fillText(emoji, lx + padX, y);
   }
 
@@ -1080,7 +1082,7 @@ function svDrawPlayer(ctx, x, y, name, color, build) {
   ctx.textAlign    = 'left';
   ctx.textBaseline = 'middle';
   ctx.shadowColor  = 'rgba(0,0,0,0.8)';
-  ctx.shadowBlur   = 3;
+  ctx.shadowBlur   = 3 * STRATEGY_MARK_SCALE;
   ctx.fillText(short, lx + padX + emojiW, y);
 
   ctx.restore();
@@ -1104,10 +1106,10 @@ function svDrawCanvas(preview) {
     // dot at start
     ctx.save();
     ctx.beginPath();
-    ctx.arc(arrowStart.x, arrowStart.y, 6, 0, Math.PI * 2);
+    ctx.arc(arrowStart.x, arrowStart.y, 6 * STRATEGY_MARK_SCALE, 0, Math.PI * 2);
     ctx.fillStyle   = color;
     ctx.shadowColor = color;
-    ctx.shadowBlur  = 10;
+    ctx.shadowBlur  = 10 * STRATEGY_MARK_SCALE;
     ctx.fill();
     ctx.restore();
     if (preview) svDrawArrow(ctx, arrowStart.x, arrowStart.y, preview.x, preview.y, color, 0.55, sv.tool === 'arrowDashed');
@@ -1126,9 +1128,9 @@ function svHitTest(x, y) {
   for (let i = sv.elements.length - 1; i >= 0; i--) {
     const el = sv.elements[i];
     if (el.type === 'player') {
-      if (Math.hypot(el.x - x, el.y - y) <= 20) return i;
+      if (Math.hypot(el.x - x, el.y - y) <= 20 * STRATEGY_MARK_SCALE) return i;
     } else if (el.type === 'arrow') {
-      if (svDistToSegment(x, y, el.x1, el.y1, el.x2, el.y2) <= 14) return i;
+      if (svDistToSegment(x, y, el.x1, el.y1, el.x2, el.y2) <= 14 * STRATEGY_MARK_SCALE) return i;
     }
   }
   return -1;
