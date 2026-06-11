@@ -7,9 +7,9 @@ const SQUADS = {
 };
 
 const GEAR_TIERS = {
-  low:  { label: 'Низький',  color: '#64748b' },
-  mid:  { label: 'Середній', color: '#f59e0b' },
-  high: { label: 'Високий',  color: '#22c55e' }
+  low:  { label: 'Потужний',      color: '#64748b' },
+  mid:  { label: 'Дуже потужний', color: '#f59e0b' },
+  high: { label: 'Легенда',       color: '#22c55e' }
 };
 
 const state = {
@@ -126,6 +126,7 @@ let strategyPresets = {};
 let activeStrategyPresetId = null;
 
 const BATTLE_STATE_KEY = 'gvg-battle-state';
+const PLAYERS_CACHE_KEY = 'gvg-players'; // кеш списку гравців із Firebase — щоб не блимало старе число з data.js
 
 // Початковий стан пачок (відповідає скрину 19.05.2026)
 const INITIAL_BATTLE_STATE = {
@@ -506,15 +507,12 @@ let editorSort = { field: 'name', dir: 'asc' };
 // Колонки редактора: field — ключ гравця, sortable — чи клікабельний заголовок
 const EDITOR_COLUMNS = [
   { field: 'name',             label: "Ім'я",      sortable: true },
-  { field: 'build',            label: 'Клас',      sortable: true },
+  { field: 'build',            label: 'GvG білд',  sortable: true },
   { field: 'altBuild',         label: 'Альт',      sortable: true },
-  { field: 'mainRole',         label: 'Гол. клас', sortable: true },
   { field: 'device',           label: 'Пристрій',  sortable: true },
-  { field: 'gearLevel',        label: 'Споряд.',   sortable: true },
-  { field: 'arenaRank',        label: 'Арена',     sortable: true },
+  { field: 'gearLevel',        label: 'Потужність', sortable: true },
   { field: 'prevSeasonMythic', label: 'Mythic',    sortable: true },
-  { field: 'mastery',          label: 'Майст.',    sortable: true },
-  { field: 'ready',            label: 'Готов.',    sortable: true },
+  { field: 'ready',            label: 'Готов',    sortable: true },
   { field: 'squad',            label: 'Пачка',     sortable: true },
   { field: 'note',             label: 'Нотатка',   sortable: false },
 ];
@@ -567,23 +565,18 @@ function viewEditor() {
   const buildOptsOpt  = [{ value: '', label: '—' }, ...buildOpts];
   const gearOpts      = Object.entries(GEAR_TIERS).map(([k, t]) => ({ value: k, label: t.label }));
   const squadOpts     = [{ value: '', label: '—' }, { value: 'attack', label: 'Attack' }, { value: 'def', label: 'Defence' }];
-  const mainRoleOpts  = [{ value: '', label: '—' }, ...MAIN_ROLES.map(r => ({ value: r, label: r }))];
   const deviceOpts    = [{ value: '', label: '—' }, ...DEVICE_OPTIONS.map(d => ({ value: d, label: d }))];
-  const arenaOpts     = [{ value: '', label: '—' }, ...ARENA_RANKS.map(a => ({ value: a, label: a }))];
 
   const rows = editorSortedPlayers()
     .map(p => `<tr>
       <td class="ed-name"><input class="ed-input ed-input--name" value="${esc(p.name)}" data-ed-name="${esc(p.name)}" data-ed-field="name"></td>
       <td>${edSelect(p.name, 'build', p.build, buildOpts)}</td>
       <td>${edSelect(p.name, 'altBuild', p.altBuild, buildOptsOpt)}</td>
-      <td>${edSelect(p.name, 'mainRole', p.mainRole, mainRoleOpts)}</td>
       <td>${edSelect(p.name, 'device', p.device, deviceOpts)}</td>
       <td>${edSelect(p.name, 'gearLevel', p.gearLevel, gearOpts)}</td>
-      <td>${edSelect(p.name, 'arenaRank', p.arenaRank, arenaOpts)}</td>
       <td class="ed-center"><input type="checkbox" data-ed-name="${esc(p.name)}" data-ed-field="prevSeasonMythic"${p.prevSeasonMythic ? ' checked' : ''}></td>
-      <td><input class="ed-input ed-input--num" type="number" value="${p.mastery ?? ''}" data-ed-name="${esc(p.name)}" data-ed-field="mastery"></td>
       <td class="ed-center"><input type="checkbox" data-ed-name="${esc(p.name)}" data-ed-field="ready"${p.ready ? ' checked' : ''}></td>
-      <td>${edSelect(p.name, 'squad', p.squad, squadOpts)}</td>
+      <td class="ed-squad ed-squad--${p.squad === 'attack' ? 'attack' : p.squad === 'def' ? 'def' : 'none'}">${edSelect(p.name, 'squad', p.squad, squadOpts)}</td>
       <td><input class="ed-input" value="${esc(p.note || '')}" data-ed-name="${esc(p.name)}" data-ed-field="note"></td>
       <td class="ed-center"><button class="ed-del" data-action="editor-del" data-ed-name="${esc(p.name)}" title="Видалити гравця">✕</button></td>
     </tr>`).join('');
@@ -1964,6 +1957,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initEvents();
   initPlayerModal();
 
+  // Синхронно підтягуємо кеш гравців — щоб одразу показати актуальне число,
+  // а не старий хардкод із data.js до відповіді Firebase.
+  try {
+    const cachedPlayers = JSON.parse(localStorage.getItem(PLAYERS_CACHE_KEY));
+    if (cachedPlayers) applyFirebasePlayers(cachedPlayers);
+  } catch {}
+
   // Редактор «Таблиця» доступний лише зі своєї прихованої сторінки (папка-рут),
   // яка ставить body[data-force-editor]. Жодна вкладка тоді не активна.
   if (document.body.dataset.forceEditor) {
@@ -2022,6 +2022,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof fbListenPlayers === 'function') {
     fbListenPlayers(data => {
       if (!data) return; // немає даних — лишаємо data.js
+      try { localStorage.setItem(PLAYERS_CACHE_KEY, JSON.stringify(data)); } catch {}
       applyFirebasePlayers(data);
       syncSquadsFromSlots();
       initRolePills();

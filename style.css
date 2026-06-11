@@ -1523,6 +1523,11 @@ body.view-strategy #stats-bar {
   display: none !important;
 }
 
+/* Фільтри не працюють у редакторі-таблиці — ховаємо їх */
+body[data-force-editor] .filters-panel {
+  display: none !important;
+}
+
 @media (max-width: 640px) {
   .sv-body { flex-direction: column; }
   .sv-sidebar {
@@ -2005,6 +2010,11 @@ body.view-strategy #stats-bar {
 .editor-table select.ed-input { cursor: pointer; }
 .editor-table select.ed-input option { background: var(--surface-solid); color: var(--text); }
 .editor-table input[type="checkbox"] { cursor: pointer; accent-color: var(--accent); width: 16px; height: 16px; }
+
+/* Колір комірки «Пачка»: атака — червоний, деф — синій, нейтрал — білий */
+.ed-squad--attack select.ed-input { color: #ff5a6e; font-weight: 600; }
+.ed-squad--def    select.ed-input { color: #2f9bff; font-weight: 600; }
+.ed-squad--none   select.ed-input { color: var(--text); }
 
 /* Закріплена перша колонка (ім'я) — не губиться при горизонтальному скролі */
 .editor-table th:first-child,
