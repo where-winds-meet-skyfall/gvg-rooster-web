@@ -926,7 +926,7 @@ function viewBattle() {
   const dz = battleEditMode ? ' data-droppable="true"' : '';
   const freeRows = free.map(p => bvRow(p, battleEditMode)).join('');
   const poolHtml = (free.length > 0 || battleEditMode)
-    ? `<div class="bv-pool bv-zone" data-squad="__free__" data-reserve="false"${dz}><div class="bv-pool-hdr">🔄 Незакріплені${free.length ? ` · ${free.length}` : ''}</div>${freeRows || '<span class="bv-empty-hint">Всі гравці розподілені</span>'}</div>`
+    ? `<div class="bv-pool bv-zone" data-drop-target="free-list" data-squad="__free__" data-reserve="false"${dz}><div class="bv-pool-hdr">🔄 Незакріплені${free.length ? ` · ${free.length}` : ''}</div>${freeRows || '<span class="bv-empty-hint">Всі гравці розподілені</span>'}</div>`
     : '';
 
   const sideHtml = battleEditMode ? (() => {
@@ -949,7 +949,8 @@ function viewBattle() {
       const display  = (nameOk && buildOk && squadOk) ? '' : ' style="display:none"';
       return `<div class="bv-sidebar-row ${rowCls}"${display} data-player="${esc(p.name)}" data-build="${esc(p.build || '')}" data-squad="${squadKey}" draggable="true">${iconHtml}<span class="bv-name">${esc(p.name)}</span></div>`;
     }).join('');
-    return `<aside class="bv-sidebar">
+    const sidebarDrop = battleEditMode ? ' data-droppable="true" data-drop-target="free-list"' : '';
+    return `<aside class="bv-sidebar"${sidebarDrop}>
       ${buildSidebarStickyHtml('Всі гравці', sf)}
       <div class="bv-sidebar-list">${rowsHtml}</div>
     </aside>`;
@@ -1856,7 +1857,7 @@ function initEvents() {
         if (p) p.squad = toSquad;
         if (toZone === 'reserve') battleReserves.add(name); else battleReserves.delete(name);
       }
-    } else {
+    } else if (zone.dataset.dropTarget === 'free-list') {
       // підпало на вільний пул
       if (_dragFromSlot) {
         const { squad: fSq, zone: fZone, idx: fIdx } = _dragFromSlot;
@@ -1866,6 +1867,8 @@ function initEvents() {
       }
       const p = PLAYERS.find(x => x.name === name);
       if (p) { p.squad = null; battleReserves.delete(name); }
+    } else {
+      return;
     }
     saveBattleState();
     render();

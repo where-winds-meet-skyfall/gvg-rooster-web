@@ -1131,6 +1131,13 @@ details[open] > .group-header::before { content: "▾"; }
   top: 60px;
   backdrop-filter: blur(12px);
 }
+.bv-sidebar[data-droppable="true"] {
+  border-color: rgba(74,158,255,0.18);
+}
+.bv-sidebar.bv-drag-over {
+  background: rgba(74,158,255,0.07);
+  border-color: var(--accent);
+}
 .bv-sidebar-sticky {
   position: sticky;
   top: 0;
